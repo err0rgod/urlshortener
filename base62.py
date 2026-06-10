@@ -1,10 +1,8 @@
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
-from sonyflake import SonyFlake
 
-gen = SonyFlake()
 
-def encode_base62(num):
+def encode_base62(num) -> str:
     if num == 0:
         return "0"
 
@@ -16,6 +14,4 @@ def encode_base62(num):
 
     return ''.join(reversed(result))
 
-for i in range(1000):
-    print(encode_base62(gen.next_id()))
 
