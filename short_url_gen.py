@@ -3,6 +3,16 @@ from datetime import datetime , UTC
 from base62 import encode_base62
 from models import urldata
 from database import add_to_db, get_long_url, is_long_url_exists
+import redis
+
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True
+)
+
+
+
 
 custom_epoch = datetime(2014, 9, 1, 0, 0, 0, tzinfo=UTC)
 
@@ -32,13 +42,30 @@ def add_url():
     if exists:
         pass
     else: 
+        redis_client.set(
+            f"url:{short_url}",
+            long_url,
+            ex=3600
+            )
         add_to_db(url)
 
 
 def serve_url(short_url : str):
+    cached = redis_client.get(f"url:{short_url}")
+
+    if cached:
+        return cached
+    
     long_url = get_long_url(short_url)
+
     if long_url:
+        redis_client.set(
+            f"url:{short_url}",
+            long_url,
+            ex = 3600
+        )
         print(long_url)
+
     else:
         print("URL does not exists")
 
