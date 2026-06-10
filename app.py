@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from short_url_gen import get_short_url
 
+
 app = FastAPI()
 
 
