@@ -2,9 +2,9 @@ from sonyflake import SonyFlake
 from datetime import datetime , UTC
 from base62 import encode_base62
 from models import urldata
-from database import add_to_db, get_long_url, is_long_url_exists
+from database import add_to_db, get_long_url, is_long_url_exists, mark_url_banned
 import redis
-import time
+# from validations import check_safe_browsing
 
 redis_client = redis.Redis(
     host="localhost",
@@ -51,14 +51,16 @@ def add_url(long_url : str):
     add_to_db(url)
     return short_url
 
+def ban_in_cache(short_url: str):
+    redis_client.set(short_url, "BANNED", ex=3600)
 
 def serve_url(short_url : str):
+    
     # start_time = time.perf_counter()
     cached = redis_client.get(short_url)
     # end_time = time.perf_counter()
 
     if cached:
-        pass
         return cached
         # print(f"redis time : {(end_time-start_time)*1000}")
     else:   
@@ -75,17 +77,5 @@ def serve_url(short_url : str):
             return long_url
             
         else:
-            print("URL does not exists")
+            print("URL does not exist")
 
-# def main():
-#     print(" 1. for Adding url 2. for fetching url")
-#     entry = int(input("Enter choice: "))
-#     if entry == 1:
-#         add_url()
-
-#     elif entry == 2:
-#         short_url = input("Enter short url: ")
-#         serve_url(short_url)
-
-# if __name__ == "__main__":
-#     main()

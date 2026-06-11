@@ -7,3 +7,4 @@ class urldata(SQLModel, table = True):
     long_url : str = Field(nullable=False, unique=True)
     created_at : datetime = Field(default_factory=lambda:datetime.now(UTC))
     click_count: int = Field(default=0)
+    is_banned: bool = Field(default=False)
