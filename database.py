@@ -33,4 +33,4 @@ def is_long_url_exists(long_url : str) -> bool:
     with Session(engine) as session:
         statement = select(urldata).where(urldata.long_url == long_url)
         results = session.exec(statement).first()
-        return results is not None
+        return results.short_url

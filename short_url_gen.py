@@ -32,6 +32,9 @@ def get_unique_id() -> str:
 
 def add_url(long_url : str):
     
+    exists = is_long_url_exists(long_url)
+    if exists:
+        return exists
     short_url = get_short_url()
     url = urldata(
         short_url=short_url,
@@ -39,16 +42,13 @@ def add_url(long_url : str):
         created_at= datetime.now(UTC),
         click_count=0
     )
-    exists = is_long_url_exists(long_url)
-    if exists:
-        pass
-    else: 
-        redis_client.set(
-            short_url,
-            long_url,
-            ex=3600
-            )
-        add_to_db(url)
+    
+    redis_client.set(
+        short_url,
+        long_url,
+        ex=3600
+        )
+    add_to_db(url)
     return short_url
 
 
