@@ -21,6 +21,11 @@ async def index():
     with open("templates/index.html") as f:
         return f.read()
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy():
+    with open("templates/privacy.html") as f:
+        return f.read()
+
 @app.get("/{short_url}")
 async def get_short_give_long(short_url: str):
     try:

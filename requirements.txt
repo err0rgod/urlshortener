@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+httpx
+sqlmodel
+redis
+python-dotenv
+sonyflake-py
+psycopg2-binary
+pydantic[email]
