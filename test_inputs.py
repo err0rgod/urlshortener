@@ -1,28 +1,43 @@
-import httpx
-import asyncio
+import time
 
-async def test_shorten(url):
-    payload = {"long_url": url}
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.post("http://localhost:8000/shorten", json=payload)
-            print(f"URL: {url[:50]}... | Status: {resp.status_code} | Response: {resp.text}")
-        except Exception as e:
-            print(f"URL: {url[:50]}... | Failed: {e}")
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
-async def main():
-    test_urls = [
-        "https://google.com",              # Valid
-        "not-a-url",                       # Invalid format
-        "http://this-does-not-exist.xyz",  # Valid format, but dead link
-        "http://127.0.0.1",                # Potential SSRF
-        "",                                # Empty
-        "https://" + "a" * 2000 + ".com"   # Extremely long
-    ]
-    
-    print("Testing inputs (Ensure server is running on localhost:8000)...")
-    for url in test_urls:
-        await test_shorten(url)
+from ratelimit import rateLimiterStore
 
-if __name__ == "__main__":
-    asyncio.run(main())
+app = FastAPI()
+
+# Configure rate limits: 10 requests burst, 2 tokens added every 1 second.
+limiter = rateLimiterStore(max_tokens=10, refill_rate=2, interval=1.0)
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """
+    Middleware that enforces per-IP rate limiting on every request.
+    Adds standard rate limit headers to every response.
+    """
+    # Identify the client by IP address.
+    client_ip = request.client.host
+    bucket = limiter.get_bucket(client_ip)
+
+    # Check if the client has tokens available.
+    if not bucket.allow_request():
+        retry_after = bucket.get_reset_time() - time.time()
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Try again later."},
+            headers={
+                "Retry-After": str(max(1, int(retry_after))),
+                "X-RateLimit-Limit": str(bucket.max_tokens),
+                "X-RateLimit-Remaining": str(bucket.get_remaining()),
+                "X-RateLimit-Reset": str(int(bucket.get_reset_time())),
+            },
+        )
+
+    # Request is allowed. Process it and add rate limit headers to the response.
+    response = await call_next(request)
+    response.headers["X-RateLimit-Limit"] = str(bucket.max_tokens)
+    response.headers["X-RateLimit-Remaining"] = str(bucket.get_remaining())
+    response.headers["X-RateLimit-Reset"] = str(int(bucket.get_reset_time()))
+    return response
