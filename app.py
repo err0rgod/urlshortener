@@ -69,7 +69,7 @@ async def get_short_give_long(short_url: str):
         long_url = serve_url(short_url)
     except Exception:
         raise HTTPException(status_code=503, detail="Service temporary unavailable")
-        
+
     if long_url == "BANNED":
         with open("templates/banned.html", encoding="utf-8") as f:
             return HTMLResponse(content=f.read(), status_code=403)
