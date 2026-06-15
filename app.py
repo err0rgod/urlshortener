@@ -1,11 +1,40 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache
 from database import mark_url_banned
 from validations import is_valid_url, check_safe_browsing
+from ratelimit import RateLimiterStore
+import time
 
 app = FastAPI()
+limiter = RateLimiterStore(max_tokens=10,refill_rate=1, interval=1)
+
+@app.middleware("http")
+async def rate_limit_middleware(request : Request, call_next):
+    client_ip = request.client.host
+    bucket = limiter.get_bucket(client_ip)
+    if not bucket.allow_request():
+        retry_after = bucket.get_reset_time()- time.time()
+        return JSONResponse(
+            status_code=429,
+            content={"detail":"Too many requests. Try again later."},
+            headers={
+                "Retry-After":str(max(1, int(retry_after))),
+                "X-RateLimit-Limit":str(bucket.max_tokens),
+                "X-RateLimit-Remaining":str(bucket.get_remaining()),
+                "X-RateLimit-Reset": str(int(bucket.get_reset_time))
+            },
+        )
+    
+    # if valid return normal
+    response = await call_next(request)
+    response.headers["X-RateLimit-Limit"]=str(bucket.max_tokens)
+    response.headers["X-RateLimit-Remaining"]=str(bucket.get_remaining)
+    response.headers["X-RateLimit-Reset"]=str(bucket.get_reset_time)
+    return response
+
+
 
 class URLRequest(BaseModel):
     long_url: str = Field(..., max_length=2048)

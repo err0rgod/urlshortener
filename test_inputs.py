@@ -3,12 +3,12 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from ratelimit import rateLimiterStore
+from ratelimit import RateLimiterStore
 
 app = FastAPI()
 
 # Configure rate limits: 10 requests burst, 2 tokens added every 1 second.
-limiter = rateLimiterStore(max_tokens=10, refill_rate=2, interval=1.0)
+limiter = RateLimiterStore(max_tokens=10, refill_rate=2, interval=5.0)
 
 
 @app.middleware("http")
@@ -41,3 +41,4 @@ async def rate_limit_middleware(request: Request, call_next):
     response.headers["X-RateLimit-Remaining"] = str(bucket.get_remaining())
     response.headers["X-RateLimit-Reset"] = str(int(bucket.get_reset_time()))
     return response
+
