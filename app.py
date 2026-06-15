@@ -8,7 +8,7 @@ from ratelimit import RateLimiterStore
 import time
 
 app = FastAPI()
-limiter = RateLimiterStore(max_tokens=10,refill_rate=1, interval=1)
+limiter = RateLimiterStore(max_tokens=10,refill_rate=6, interval=60)
 
 @app.middleware("http")
 async def rate_limit_middleware(request : Request, call_next):
@@ -16,22 +16,30 @@ async def rate_limit_middleware(request : Request, call_next):
     bucket = limiter.get_bucket(client_ip)
     if not bucket.allow_request():
         retry_after = bucket.get_reset_time()- time.time()
+        accept_header = request.headers.get("accept", "")
+        
+        if "text/html" in accept_header:
+            return HTMLResponse(
+                content=f"<html><body><h1>Too Many Requests</h1><p>Please try again after {retry_after:.0f} seconds.</p></body></html>",
+                status_code=429
+            )
+        
         return JSONResponse(
             status_code=429,
-            content={"detail":"Too many requests. Try again later."},
+            content={"detail": f"Too many requests. Please try again after {retry_after:.0f} seconds."},
             headers={
                 "Retry-After":str(max(1, int(retry_after))),
                 "X-RateLimit-Limit":str(bucket.max_tokens),
                 "X-RateLimit-Remaining":str(bucket.get_remaining()),
-                "X-RateLimit-Reset": str(int(bucket.get_reset_time))
+                "X-RateLimit-Reset": str(int(bucket.get_reset_time()))
             },
         )
     
     # if valid return normal
     response = await call_next(request)
     response.headers["X-RateLimit-Limit"]=str(bucket.max_tokens)
-    response.headers["X-RateLimit-Remaining"]=str(bucket.get_remaining)
-    response.headers["X-RateLimit-Reset"]=str(bucket.get_reset_time)
+    response.headers["X-RateLimit-Remaining"]=str(bucket.get_remaining())
+    response.headers["X-RateLimit-Reset"]=str(bucket.get_reset_time())
     return response
 
 
@@ -47,12 +55,12 @@ async def background_safe_browsing_check(short_url: str, long_url: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def index():  
-    with open("templates/index.html") as f:
+    with open("templates/index.html", encoding="utf-8") as f:
         return f.read()
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy():
-    with open("templates/privacy.html") as f:
+    with open("templates/privacy.html", encoding="utf-8") as f:
         return f.read()
 
 @app.get("/{short_url}")
@@ -63,7 +71,7 @@ async def get_short_give_long(short_url: str):
         raise HTTPException(status_code=503, detail="Service temporary unavailable")
         
     if long_url == "BANNED":
-        with open("templates/banned.html") as f:
+        with open("templates/banned.html", encoding="utf-8") as f:
             return HTMLResponse(content=f.read(), status_code=403)
             
     if long_url:
