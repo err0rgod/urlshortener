@@ -1,7 +1,9 @@
 import os 
 from dotenv import load_dotenv
-from sqlmodel import create_engine, SQLModel, Session, select
-from models import urldata
+from sqlmodel import create_engine,SQLModel, Session, select
+from typing import Optional
+from models import urldata, User
+from datetime import datetime, UTC
 load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH")
@@ -48,3 +50,26 @@ def is_long_url_exists(long_url : str):
             return results.short_url
         else: 
             return None
+        
+
+
+
+def get_user_by_email(email : str) -> Optional[User]:
+    with Session(engine) as session:
+        statement = select(User).where(email == User.email)
+        return session.exec(statement).first()
+    
+
+def create_user(email : str, full_name : str, oauth_provider : str, oauth_id : str)->User:
+    with Session(engine) as session:
+        user = User(
+            email=email,
+            full_name=full_name,
+            oauth_id=oauth_id,
+            oauth_provider=oauth_provider,
+            created_at=datetime.now(UTC)
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
