@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Ensure the backend directory is in python path for local imports
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
+
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -6,6 +14,8 @@ from database import mark_url_banned
 from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
 import time
+
+FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
 
 app = FastAPI()
 limiter = RateLimiterStore(max_tokens=10,refill_rate=6, interval=60)
@@ -55,12 +65,12 @@ async def background_safe_browsing_check(short_url: str, long_url: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def index():  
-    with open("templates/index.html", encoding="utf-8") as f:
+    with open(os.path.join(FRONTEND_DIR, "index.html"), encoding="utf-8") as f:
         return f.read()
 
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy():
-    with open("templates/privacy.html", encoding="utf-8") as f:
+    with open(os.path.join(FRONTEND_DIR, "privacy.html"), encoding="utf-8") as f:
         return f.read()
 
 @app.get("/{short_url}")
@@ -71,7 +81,7 @@ async def get_short_give_long(short_url: str):
         raise HTTPException(status_code=503, detail="Service temporary unavailable")
 
     if long_url == "BANNED":
-        with open("templates/banned.html", encoding="utf-8") as f:
+        with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
             return HTMLResponse(content=f.read(), status_code=403)
             
     if long_url:

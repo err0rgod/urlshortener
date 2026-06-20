@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShortenIt - Link Management & Security Platform for Businesses</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+    
+    <!-- Top Navigation Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/" class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    <span>ShortenIt</span>
+                </a>
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="#features" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Features</a>
+                    <a href="#security-hub" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Security</a>
+                    <a href="#pricing" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Pricing</a>
+                    <a href="#api" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Developer API</a>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="#login" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Log in</a>
+                <a href="#pricing" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    Get Started Free
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="bg-white border-b border-slate-200 pt-16 pb-20">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 mb-6">
+                Now serving enterprise brand domains
+            </span>
+            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-6 leading-tight max-w-3xl mx-auto">
+                Link management infrastructure built for modern teams.
+            </h1>
+            <p class="text-lg text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
+                Shorten, secure, and track your links at scale. Enhance your brand identity with custom domains, protect customers with automated Safe Browsing checks, and analyze performance in real time.
+            </p>
+            
+            <!-- Quick Trial Shortener Widget -->
+            <div class="max-w-xl mx-auto bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm text-left">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Try it instantly</h3>
+                <form id="shorten-form" class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" id="long_url" placeholder="Paste your long link here (e.g. https://google.com)" required
+                        class="flex-grow px-4 py-3 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
+                    <button type="submit" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 whitespace-nowrap">
+                        Shorten Link
+                    </button>
+                </form>
+                
+                <div id="error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
+                
+                <div id="result" class="hidden mt-4">
+                    <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Your shortened URL</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="short_url" readonly
+                            class="flex-grow px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none cursor-default">
+                        <button id="copy-btn" 
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key SaaS Features Grid -->
+    <section id="features" class="py-20 bg-slate-50 border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-extrabold tracking-tight text-slate-900">
+                    Everything you need to manage links at scale
+                </h2>
+                <p class="mt-4 text-base text-slate-500 max-w-xl mx-auto">
+                    Hosted cloud plans or dedicated white-label setups. We empower teams with performance metrics and threat mitigation tools.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <div class="mb-4 text-indigo-600">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900 mb-2">Custom Branded Domains</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Replace generic redirect domains with your own corporate domain names. Increase brand recognition and link click-through rates by up to 34%.
+                    </p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <div class="mb-4 text-indigo-600">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900 mb-2">Real-Time Data Analytics</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Get granular reports on user clicks, locations, browsers, and referrers. Feed structured click statistics directly into your business database.
+                    </p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <div class="mb-4 text-indigo-600">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                    </div>
+                    <h3 class="text-base font-bold text-slate-900 mb-2">API & Webhooks</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Generate links programmatically within your workflows. Integrate with modern developer tools using our high-performance HTTP JSON endpoint.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Security Focus Interactive Section (Previously Tab Section) -->
+    <section id="security-hub" class="py-20 bg-white border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                
+                <div class="lg:col-span-5 space-y-6">
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Enterprise Security Hub</span>
+                    <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                        Securing redirection infrastructure.
+                    </h2>
+                    <p class="text-sm text-slate-500 leading-relaxed">
+                        Most URL shorteners are exploited for phishing and Server-Side scans. ShortenIt implements rigorous validation steps to keep your organization and customers safe.
+                    </p>
+                    
+                    <!-- Tabs Headers -->
+                    <div class="flex space-x-1 border-b border-slate-200">
+                        <button class="tab-btn pb-2.5 px-2 text-xs font-semibold border-b-2 border-indigo-600 text-indigo-600 focus:outline-none" data-tab="security">
+                            Security Protocols
+                        </button>
+                        <button class="tab-btn pb-2.5 px-2 text-xs font-medium border-b-2 border-transparent text-slate-400 focus:outline-none" data-tab="developers">
+                            Developer Tools
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs Content area (7 columns) -->
+                <div class="lg:col-span-7 bg-slate-50 border border-slate-200 rounded-xl p-6 sm:p-8">
+                    
+                    <!-- Security Tab content -->
+                    <div class="tab-content" id="tab-security">
+                        <ul class="space-y-5">
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 text-emerald-600 font-bold mr-3">✓</span>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">SSRF Protection Shield</h4>
+                                    <p class="text-[11px] text-slate-500 leading-normal">Blocks internal private subnet IPs (RFC 1918), locking down Server-Side Request Forgery attempts targeting local systems.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 text-emerald-600 font-bold mr-3">✓</span>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">Google Safe Browsing</h4>
+                                    <p class="text-[11px] text-slate-500 leading-normal">Asynchronously scans URLs via safe-browsing directories to identify, block, and ban malware or credential theft vectors.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 text-emerald-600 font-bold mr-3">✓</span>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">Distributed Collision-Free IDs</h4>
+                                    <p class="text-[11px] text-slate-500 leading-normal">Non-sequential codes generated using SonyFlake structures and Base62 mappings protect against brute-force link harvesting.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="flex-shrink-0 text-emerald-600 font-bold mr-3">✓</span>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900 mb-0.5">In-Memory Redis Blacklist</h4>
+                                    <p class="text-[11px] text-slate-500 leading-normal">Banned redirection links are instantly cached as blacklisted in Redis to block malicious traffic with zero database load.</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Developer Tab content -->
+                    <div class="tab-content hidden" id="tab-developers">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">cURL API Reference</p>
+                        <code class="block bg-white border border-slate-200 rounded-lg p-3 text-[11px] text-slate-800 font-mono break-all leading-relaxed mb-4">
+                            curl -X POST https://link.zerodaily.in/shorten -H "Content-Type: application/json" -d '{"long_url": "https://example.com"}'
+                        </code>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Expected JSON Output</p>
+                        <pre class="bg-white border border-slate-200 rounded-lg p-3 text-[11px] text-slate-800 font-mono overflow-x-auto">
+{
+  "short_url": "https://link.zerodaily.in/sK39x"
+}</pre>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section (SaaS Highlight) -->
+    <section id="pricing" class="py-20 bg-slate-50 border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-extrabold tracking-tight text-slate-900">
+                    Pricing Plans for Teams of All Sizes
+                </h2>
+                <p class="mt-4 text-base text-slate-500 max-w-xl mx-auto">
+                    Choose a hosted SaaS cloud plan or deploy on dedicated customer-owned tenant architectures.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-5xl mx-auto">
+                <!-- Tier 1: Free -->
+                <div class="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Developer Free</h3>
+                        <p class="text-xs text-slate-400 mb-6">Perfect for building and personal utility.</p>
+                        <div class="text-3xl font-extrabold text-slate-900 mb-6">$0<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <ul class="space-y-3.5 mb-8">
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Up to 500 links / month</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Standard analytics logs</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> SSRF and Safe Browsing checks</li>
+                        </ul>
+                    </div>
+                    <a href="#shorten-form" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors">
+                        Try Instant Shortening
+                    </a>
+                </div>
+                
+                <!-- Tier 2: Business Pro (Highlight) -->
+                <div class="bg-white border-2 border-indigo-600 rounded-xl p-8 flex flex-col justify-between shadow-sm relative">
+                    <span class="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[10px] font-bold tracking-widest uppercase py-1 px-3.5 rounded-full">
+                        Most Popular
+                    </span>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Business Pro</h3>
+                        <p class="text-xs text-slate-400 mb-6">For growing teams and brands.</p>
+                        <div class="text-3xl font-extrabold text-slate-900 mb-6">$29<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <ul class="space-y-3.5 mb-8">
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Unlimited short redirects</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> 3 Custom Domain Names</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Extended location reports</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Full API Integration & SDKs</li>
+                        </ul>
+                    </div>
+                    <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        Start 14-Day Free Trial
+                    </button>
+                </div>
+                
+                <!-- Tier 3: Enterprise Tenant -->
+                <div class="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Enterprise Dedicated</h3>
+                        <p class="text-xs text-slate-400 mb-6">Dedicated deployment on customer tenants.</p>
+                        <div class="text-3xl font-extrabold text-slate-900 mb-6">Custom</div>
+                        <ul class="space-y-3.5 mb-8">
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Single Tenant hosting (AWS/GCP)</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Custom branding & SSL termination</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> 99.99% redirection uptime SLAs</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Custom DB logging adapter</li>
+                        </ul>
+                    </div>
+                    <button class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
+                        Contact Sales
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-12 px-4 mt-auto">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12 text-left">
+            <div class="space-y-4">
+                <span class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
+                    <svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    <span>ShortenIt</span>
+                </span>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Enterprise brand links and secure redirect infrastructure for marketing teams, developers, and growing organizations.
+                </p>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-widest mb-3">Product</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="#features" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors">Features</a></li>
+                    <li><a href="#pricing" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors">Pricing Options</a></li>
+                    <li><a href="#security-hub" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors">Link Security</a></li>
+                    <li><a href="#api" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors">API Keys</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-widest mb-3">Company</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="/privacy" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors">Privacy Policy</a></li>
+                    <li><a href="#terms" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors" onclick="return false;">Terms of Service</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-slate-900 uppercase tracking-widest mb-3">Legal</h4>
+                <ul class="space-y-2.5">
+                    <li><a href="/privacy" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors">Privacy Policy</a></li>
+                    <li><a href="#terms" class="text-xs text-slate-500 hover:text-indigo-600 transition-colors" onclick="return false;">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="max-w-6xl mx-auto border-t border-slate-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400">
+                &copy; 2026 err0god. All rights reserved. Built by <a href="https://github.com/err0rgod" target="_blank" class="text-indigo-600 hover:underline">Nirbhay Katiyar</a>.
+            </div>
+            <div class="flex space-x-6">
+                <a href="https://github.com/err0rgod" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">GitHub</a>
+                <a href="https://linkedin.com/in/nirbhay-katiyar" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">LinkedIn</a>
+                <a href="https://x.com/err0god" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">X</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const form = document.getElementById('shorten-form');
+        const errorEl = document.getElementById('error');
+        const resultEl = document.getElementById('result');
+        const shortUrlInput = document.getElementById('short_url');
+        const copyBtn = document.getElementById('copy-btn');
+
+        // Form submission action
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            errorEl.classList.add('hidden');
+            resultEl.classList.add('hidden');
+
+            const long_url = document.getElementById('long_url').value;
+
+            try {
+                const response = await fetch('/shorten', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ long_url })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    shortUrlInput.value = data.short_url;
+                    resultEl.classList.remove('hidden');
+                } else {
+                    errorEl.textContent = data.detail || 'Something went wrong';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                // If run locally via file:/// protocol, fallback gracefully for layout preview
+                if (window.location.protocol === 'file:') {
+                    shortUrlInput.value = window.location.href + '#mock-shortened';
+                    resultEl.classList.remove('hidden');
+                } else {
+                    errorEl.textContent = 'Error connecting to server';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+        };
+
+        // Copy button action
+        copyBtn.onclick = () => {
+            shortUrlInput.select();
+            navigator.clipboard.writeText(shortUrlInput.value);
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => copyBtn.textContent = originalText, 2000);
+        };
+
+        // Tabs switching action
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Reset tabs active styles
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('border-indigo-600', 'text-indigo-600', 'font-semibold');
+                    btn.classList.add('border-transparent', 'text-slate-400');
+                });
+                tabContents.forEach(content => content.classList.add('hidden'));
+
+                // Apply active styles to selected tab
+                button.classList.remove('border-transparent', 'text-slate-400');
+                button.classList.add('border-indigo-600', 'text-indigo-600', 'font-semibold');
+                
+                const tabId = button.getAttribute('data-tab');
+                document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            });
+        });
+    </script>
+</body>
+</html>

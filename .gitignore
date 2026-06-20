@@ -1,3 +1,17 @@
 *.env
 *.pyc
 *__pycache__
+
+# Local backups
+templates_backup/
+testui/
+
+# Environments
+venv/
+.venv/
+env/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
