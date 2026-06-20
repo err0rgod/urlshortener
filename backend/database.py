@@ -4,13 +4,16 @@ from sqlmodel import create_engine,SQLModel, Session, select
 from typing import Optional
 from models import urldata, User
 from datetime import datetime, UTC
+
+
 load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH")
 
 engine = create_engine(DB_PATH)
 
-SQLModel.metadata.create_all(engine)
+def init_db():
+    SQLModel.metadata.create_all(engine)
 
 
 def add_to_db(data : urldata):

@@ -10,15 +10,21 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache
-from database import mark_url_banned
+from database import mark_url_banned, init_db
 from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
+from auth import router as auth_router
 import time
+
+
+init_db()
 
 FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
 
 app = FastAPI()
+app.include_router(auth_router)
 limiter = RateLimiterStore(max_tokens=10,refill_rate=6, interval=60)
+
 
 @app.middleware("http")
 async def rate_limit_middleware(request : Request, call_next):
