@@ -1,5 +1,5 @@
 from sonyflake import SonyFlake
-from datetime import datetime , UTC
+from datetime import datetime , UTC, timedelta
 from base62 import encode_base62
 from models import urldata
 from database import add_to_db, get_long_url, is_long_url_exists, mark_url_banned, is_alias_exists
@@ -34,18 +34,22 @@ def get_unique_id() -> str:
 
 from typing import Optional
 
-def add_url(long_url : str, user_id: Optional[int] = None):
+def add_url(long_url : str, user_id: Optional[int] = None,exp_time : Optional[int] = None):
     
     exists = is_long_url_exists(long_url, user_id=user_id)
     if exists:
         return exists
+    db_exp_time = None
+    if exp_time:
+        db_exp_time= datetime.now() + timedelta(hours=exp_time)
     short_url = get_short_url()
     url = urldata(
         short_url=short_url,
         long_url=long_url,
         created_at= datetime.now(UTC),
         click_count=0,
-        user_id=user_id
+        user_id=user_id,
+        exp_time=db_exp_time
     )
     try:
         redis_client.set(
@@ -59,17 +63,24 @@ def add_url(long_url : str, user_id: Optional[int] = None):
     return short_url
 
 
-def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None):
+def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_time : Optional[int] = None):
+    exists = is_long_url_exists(long_url)
+    if exists:
+        return exists
     does_exists = is_alias_exists(custom_alias)
     if does_exists:
         return None
     else:
+        db_exp_time = None
+        if exp_time:
+            db_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
         url = urldata(
             short_url=custom_alias,
             long_url=long_url,
             created_at=datetime.now(UTC),
             click_count=0,
-            user_id=user_id
+            user_id=user_id,
+            exp_time=db_exp_time
         )
         try:
             redis_client.set(

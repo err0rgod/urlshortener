@@ -85,6 +85,23 @@
                                 class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
                         </div>
                     </div>
+
+                    <div class="flex flex-col gap-2">
+                        <label class="inline-flex items-center text-xs font-semibold text-slate-500 cursor-pointer select-none">
+                            <input type="checkbox" id="enable-expiry" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4">
+                            <span>Set Link Expiration</span>
+                        </label>
+                        
+                        <div id="expiry-container" class="hidden transition-all duration-200 ease-in-out">
+                            <select id="expiry_hours" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
+                                <option value="1">1 Hour</option>
+                                <option value="12">12 Hours</option>
+                                <option value="24">1 Day</option>
+                                <option value="72">3 Days</option>
+                                <option value="168">7 Days (Maximum)</option>
+                            </select>
+                        </div>
+                    </div>
                 </form>
                 
                 <div id="error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
@@ -399,6 +416,19 @@
             }
         });
 
+        // Toggle expiry visibility
+        const enableExpiryCheckbox = document.getElementById('enable-expiry');
+        const expiryContainer = document.getElementById('expiry-container');
+        const expiryHoursSelect = document.getElementById('expiry_hours');
+
+        enableExpiryCheckbox.addEventListener('change', () => {
+            if (enableExpiryCheckbox.checked) {
+                expiryContainer.classList.remove('hidden');
+            } else {
+                expiryContainer.classList.add('hidden');
+            }
+        });
+
         // Form submission action
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -408,9 +438,22 @@
             const long_url = document.getElementById('long_url').value;
             const enable_alias = enableAliasCheckbox.checked;
             const custom_alias = enable_alias ? customAliasInput.value.trim() : '';
+            const enable_expiry = enableExpiryCheckbox.checked;
+            const exp_time = enable_expiry ? expiryHoursSelect.value : '';
 
             try {
-                const url = custom_alias ? `/shorten?custom_alias=${encodeURIComponent(custom_alias)}` : '/shorten';
+                let url = '/shorten';
+                const params = [];
+                if (custom_alias) {
+                    params.push(`custom_alias=${encodeURIComponent(custom_alias)}`);
+                }
+                if (exp_time) {
+                    params.push(`exp_time=${encodeURIComponent(exp_time)}`);
+                }
+                if (params.length > 0) {
+                    url += `?${params.join('&')}`;
+                }
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

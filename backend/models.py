@@ -19,3 +19,4 @@ class urldata(SQLModel, table = True):
     click_count: int = Field(default=0)
     is_banned: bool = Field(default=False)
     user_id : Optional[int] = Field(default=None, foreign_key="users.id")
+    exp_time : Optional[datetime] = Field(default=None)

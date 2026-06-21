@@ -29,12 +29,15 @@ def is_alias_exists(custom_alias : str) -> bool:
             return True
         return False
 
+
 def get_long_url(short_url) -> str:
     with Session(engine) as session:
         statement = select(urldata).where(urldata.short_url == short_url)
         url = session.exec(statement).first()
         if url is None:
             return None
+        if url.exp_time and url.exp_time < datetime.now(UTC):
+            return "Expired"
         if url.is_banned:
             return "BANNED"
         url.click_count+=1
