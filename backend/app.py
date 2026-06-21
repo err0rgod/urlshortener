@@ -88,21 +88,6 @@ async def login():
     with open(os.path.join(FRONTEND_DIR, "login.html"), encoding="utf-8") as f:
         return f.read()
 
-@app.get("/{short_url}")
-async def get_short_give_long(short_url: str):
-    try:
-        long_url = serve_url(short_url)
-    except Exception:
-        raise HTTPException(status_code=503, detail="Service temporary unavailable")
-
-    if long_url == "BANNED":
-        with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=403)
-            
-    if long_url:
-        return RedirectResponse(long_url, status_code=302)
-    raise HTTPException(status_code=404, detail="Short URL not found")
-
 
 @app.get("/contact", response_class=HTMLResponse)
 async def contact():
@@ -124,6 +109,24 @@ async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
         return {"status": "success", "message": "Quotation submitted successfully"}
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to process quotation request")
+
+
+@app.get("/{short_url}")
+async def get_short_give_long(short_url: str):
+    try:
+        long_url = serve_url(short_url)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Service temporary unavailable")
+
+    if long_url == "BANNED":
+        with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
+            return HTMLResponse(content=f.read(), status_code=403)
+            
+    if long_url:
+        return RedirectResponse(long_url, status_code=302)
+    raise HTTPException(status_code=404, detail="Short URL not found")
+
+
 
 
 

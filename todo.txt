@@ -1,5 +1,4 @@
 
-features: user account & buisness accounts Auth add logged in and created_at like features
 features: dashboard 
 features: library & other integration addons 
 features: QR 

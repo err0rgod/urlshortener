@@ -9,7 +9,7 @@ load_dotenv()
 # Editable path loaded from the environment variables (with default fallback)
 QUOTATIONS_JSON_PATH = os.getenv("QUOTATIONS_JSON_PATH", "quotations.json")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-TARGET_EMAIL = "nirbhayerror@gmail.com"
+TARGET_EMAIL = os.getenv("ADMIN_EMAIL")
 
 def process_quotation(data: dict):
     """
