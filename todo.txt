@@ -1,10 +1,10 @@
-modify the URL storage structure to store the Ban and other id's for USer experience
 
 features: user account & buisness accounts Auth add logged in and created_at like features
 features: dashboard 
 features: library & other integration addons 
 features: QR 
 features: api keys & billing 
+seprate the free tier and other premium tier set rate limits 
 features: password protected URL's
 features: offload URL shortener like i sell them the product for 199$
 features: add analytics 

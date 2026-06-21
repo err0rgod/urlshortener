@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Sales - FlexURL</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+    
+    <!-- Top Navigation Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/" class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    <span>FlexURL</span>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <a href="/" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">
+                    Back to Home
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">
+                Deploy Dedicated Redirection Infrastructure
+            </h1>
+            <p class="text-sm text-slate-500 mt-2 max-w-2xl mx-auto">
+                Get a custom single-tenant instance of FlexURL deployed on your preferred cloud provider or bare metal server. Fill out the requirements below to receive a custom quote.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Direct Email Sidebar (5 cols) -->
+            <div class="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-8 shadow-sm space-y-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900 mb-2">Direct Contact</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Prefer to bypass forms? Reach out to our system architecture team directly via email. We typically respond within 12 hours.
+                    </p>
+                </div>
+
+                <div class="border-t border-slate-100 pt-6">
+                    <a href="mailto:nirbhayerror@gmail.com?subject=FlexURL Enterprise Inquiry" 
+                       class="flex items-center justify-center gap-3 w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-3 px-4 rounded-lg text-sm transition-all focus:outline-none focus:ring-2 focus:ring-slate-500">
+                        <svg class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        <span>nirbhayerror@gmail.com</span>
+                    </a>
+                </div>
+
+                <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 text-indigo-800">
+                    <h4 class="text-xs font-bold uppercase tracking-wider mb-1">What to expect</h4>
+                    <p class="text-[11px] leading-relaxed">
+                        We will schedule a brief technical review to discuss database sizing, load testing requirements, custom SLA uptimes, and routing architectures.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Detailed Requirements Form (7 cols) -->
+            <div class="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-8 shadow-sm relative">
+                
+                <!-- Success State Overlay -->
+                <div id="success-state" class="hidden absolute inset-0 bg-white rounded-xl flex flex-col items-center justify-center text-center p-8 z-10">
+                    <div class="h-12 w-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Quote Request Submitted</h3>
+                    <p class="text-xs text-slate-500 max-w-md mx-auto leading-relaxed mb-6">
+                        Thank you for your inquiry. A technical specialist has been notified and will review your specifications. A confirmation email has been logged to your records.
+                    </p>
+                    <a href="/" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-6 rounded-lg transition-all focus:outline-none">
+                        Return to Home
+                    </a>
+                </div>
+
+                <h3 class="text-lg font-bold text-slate-900 mb-6">Request Technical Architecture & Quote</h3>
+                
+                <form id="quote-form" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="business_name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Business Name *</label>
+                            <input type="text" id="business_name" required placeholder="Acme Corp"
+                                class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
+                        </div>
+                        <div>
+                            <label for="primary_contact" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Primary Contact (Email/Phone) *</label>
+                            <input type="text" id="primary_contact" required placeholder="name@company.com"
+                                class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="alternate_contact" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Alternate Contact (Optional)</label>
+                            <input type="text" id="alternate_contact" placeholder="+1 (555) 019-2834"
+                                class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
+                        </div>
+                        <div>
+                            <label for="cloud_provider" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Infrastructure Type (Optional)</label>
+                            <select id="cloud_provider" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
+                                <option value="">Not Specified</option>
+                                <option value="AWS">Amazon Web Services (AWS)</option>
+                                <option value="GCP">Google Cloud Platform (GCP)</option>
+                                <option value="Azure">Microsoft Azure</option>
+                                <option value="BareMetal">Dedicated Bare Metal Servers</option>
+                                <option value="Other">Other cloud/hybrid configuration</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="demand_desc" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Requirement Details & Volume Demands *</label>
+                        <textarea id="demand_desc" required rows="4" placeholder="Describe your required redirects volume (e.g. 5M clicks/mo), specific region deployment requirements, custom security integrations, or any bare metal hardware specifications."
+                            class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white"></textarea>
+                    </div>
+
+                    <div id="error-message" class="hidden p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
+
+                    <button type="submit" 
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg text-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Submit Requirements
+                    </button>
+                </form>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-8 px-4 mt-auto">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400">
+                &copy; 2026 err0god. All rights reserved.
+            </div>
+            <div class="flex space-x-6">
+                <a href="https://github.com/err0rgod" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">GitHub</a>
+                <a href="https://linkedin.com/in/nirbhay-katiyar" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">LinkedIn</a>
+                <a href="https://x.com/err0god" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">X</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const form = document.getElementById('quote-form');
+        const successState = document.getElementById('success-state');
+        const errorMessage = document.getElementById('error-message');
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            errorMessage.classList.add('hidden');
+
+            const payload = {
+                business_name: document.getElementById('business_name').value.trim(),
+                primary_contact: document.getElementById('primary_contact').value.trim(),
+                alternate_contact: document.getElementById('alternate_contact').value.trim(),
+                cloud_provider: document.getElementById('cloud_provider').value,
+                demand_desc: document.getElementById('demand_desc').value.trim()
+            };
+
+            try {
+                const response = await fetch('/contact-sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    successState.classList.remove('hidden');
+                } else {
+                    errorMessage.textContent = data.detail || 'An error occurred during submission';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorMessage.textContent = 'Error connecting to the quotation services';
+                errorMessage.classList.remove('hidden');
+            }
+        };
+    </script>
+</body>
+</html>

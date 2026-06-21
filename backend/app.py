@@ -14,6 +14,7 @@ from database import mark_url_banned, init_db
 from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
+from quotation import process_quotation
 from typing import Optional
 import time
 import jwt
@@ -102,6 +103,30 @@ async def get_short_give_long(short_url: str):
         return RedirectResponse(long_url, status_code=302)
     raise HTTPException(status_code=404, detail="Short URL not found")
 
+
+@app.get("/contact", response_class=HTMLResponse)
+async def contact():
+    with open(os.path.join(FRONTEND_DIR, "contact.html"), encoding="utf-8") as f:
+        return f.read()
+
+class QuoteRequest(BaseModel):
+    business_name: str = Field(..., max_length=255)
+    primary_contact: str = Field(..., max_length=255)
+    alternate_contact: Optional[str] = Field(None, max_length=255)
+    cloud_provider: Optional[str] = Field(None, max_length=50)
+    demand_desc: str = Field(..., max_length=5000)
+
+@app.post("/contact-sales")
+async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
+    try:
+        # Process quotation asynchronously in background tasks (file write + Resend API post)
+        background_tasks.add_task(process_quotation, quote.model_dump())
+        return {"status": "success", "message": "Quotation submitted successfully"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to process quotation request")
+
+
+
 @app.post("/shorten")
 async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None):
     long_url = request.long_url
@@ -141,3 +166,4 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
     full_short_url = f"{base_url}/{short_code}"
     
     return {"short_url": full_short_url}
+
