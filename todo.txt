@@ -1,8 +1,5 @@
-
-
-features: link expiration set
-features: one time link
 modify the URL storage structure to store the Ban and other id's for USer experience
+
 features: user account & buisness accounts Auth add logged in and created_at like features
 features: dashboard 
 features: library & other integration addons 

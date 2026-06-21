@@ -103,7 +103,7 @@ async def get_short_give_long(short_url: str):
     raise HTTPException(status_code=404, detail="Short URL not found")
 
 @app.post("/shorten")
-async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None, one_time : Optional[bool]= False):
+async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None):
     long_url = request.long_url
     
     if not await is_valid_url(long_url):
