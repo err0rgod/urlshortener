@@ -1,3 +1,10 @@
+features: add analytics 
+        total clicks 
+        unique vistors
+        country 
+        browser 
+        device 
+        refferer
 
 features: dashboard 
 features: library & other integration addons 
@@ -6,10 +13,3 @@ features: api keys & billing
 seprate the free tier and other premium tier set rate limits 
 features: password protected URL's
 features: offload URL shortener like i sell them the product for 199$
-features: add analytics 
-        total clicks 
-        unique vistors
-        country 
-        browser 
-        device 
-        refferer

@@ -20,3 +20,13 @@ class urldata(SQLModel, table = True):
     is_banned: bool = Field(default=False)
     user_id : Optional[int] = Field(default=None, foreign_key="users.id")
     exp_time : Optional[datetime] = Field(default=None)
+
+class clicklog(SQLModel, table=True):
+    id : int = Field(primary_key=True, nullable=False, index=True)
+    short_url : str = Field(nullable=False, foreign_key="urldata.short_url")
+    clicked_at : datetime = Field(nullable=False, default=datetime.now(UTC))
+    ip_address : str = Field(nullable=False, default="NA")
+    country : str = Field(nullable=False, default="NA")
+    browser : str = Field(nullable=False, default="NA")
+    device : str = Field(nullable=False, default="NA")
+    referres : str = Field(nullable=False, default="NA")
