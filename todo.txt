@@ -13,6 +13,7 @@ features: link expiration set
 features: offload URL shortener like i sell them the product for 199$
 features: user account & buisness accounts Auth 
 features: dashboard 
+features: library & other integration addons 
 features: api keys & billing 
 features: QR 
 features: password protected URL's
