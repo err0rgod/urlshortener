@@ -122,5 +122,22 @@
         </div>
     </footer>
 
+    <script>
+        // Redirect to homepage if user is already logged in
+        async function checkAuthAndRedirect() {
+            try {
+                const response = await fetch('/auth/me');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.logged_in) {
+                        window.location.href = '/';
+                    }
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+            }
+        }
+        checkAuthAndRedirect();
+    </script>
 </body>
 </html>

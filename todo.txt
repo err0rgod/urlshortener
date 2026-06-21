@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 features: add analytics 
         total clicks 
         unique vistors
@@ -19,7 +18,4 @@ features: QR
 features: password protected URL's
 features: one time link
 features: queue
-=======
-add rate limiting - Done
->>>>>>> 81d2c8db6cf30747c5bf2b420164d26841ffcb4b
 

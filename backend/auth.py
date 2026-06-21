@@ -110,3 +110,30 @@ async def logout():
     response = RedirectResponse(url="/")
     response.delete_cookie(key="session_token")
     return response
+
+@router.get("/auth/me")
+async def get_me(request : Request):
+    """
+    Check if user is authenticated.
+    """
+    token = request.cookies.get("session_token")
+    if not token:
+         return {"logged_in": False}
+    try:
+        payload = jwt.decode(token,JWT_SECRET_KEY,algorithms=["HS256"])
+        email = payload.get("email")
+
+        user = get_user_by_email(email)
+        if not user:
+            return {"logged_in": False}
+        
+        return {
+            "logged_in": True,
+            "user" : {
+                "id" : user.id,
+                "email" : user.email,
+                "full_name" : user.full_name
+            }
+        }
+    except jwt.PyJWTError:
+        return {"logged_in":False}

@@ -39,7 +39,7 @@
                     <a href="#api" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Developer API</a>
                 </nav>
             </div>
-            <div class="flex items-center space-x-4">
+            <div id="auth-nav-container" class="flex items-center space-x-4">
                 <a href="/auth/login/google" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Log in</a>
                 <a href="/signup" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                     Get Started Free
@@ -339,6 +339,31 @@
     </footer>
 
     <script>
+        // Check authentication state on load
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/auth/me');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.logged_in) {
+                        const container = document.getElementById('auth-nav-container');
+                        if (container) {
+                            container.innerHTML = `
+                                <span class="text-sm text-slate-600 font-medium">Hello, ${data.user.full_name}</span>
+                                <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
+                                    Log Out
+                                </a>
+                            `;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', checkAuthStatus);
+
         const form = document.getElementById('shorten-form');
         const errorEl = document.getElementById('error');
         const resultEl = document.getElementById('result');
