@@ -6,11 +6,12 @@ features: add analytics
         device 
         refferer
 
+modify the URL storage structure to store the Ban and other id's for USer experience
 features: modify website     
 features: custom aliases
 features: link expiration set
 features: offload URL shortener like i sell them the product for 199$
-features: user account & buisness accounts Auth 
+features: user account & buisness accounts Auth add logged in and created_at like features
 features: dashboard 
 features: library & other integration addons 
 features: api keys & billing 

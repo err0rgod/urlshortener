@@ -15,7 +15,9 @@ from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
 import time
+import jwt
 
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
 init_db()
 
@@ -79,6 +81,11 @@ async def privacy():
     with open(os.path.join(FRONTEND_DIR, "privacy.html"), encoding="utf-8") as f:
         return f.read()
 
+@app.get("/login", response_class=HTMLResponse)
+async def login():
+    with open(os.path.join(FRONTEND_DIR, "login.html"), encoding="utf-8") as f:
+        return f.read()
+
 @app.get("/{short_url}")
 async def get_short_give_long(short_url: str):
     try:
@@ -101,8 +108,18 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
     if not await is_valid_url(long_url):
         raise HTTPException(status_code=400, detail="Invalid, insecure, or private URL")
         
+    # Extract user_id if user is authenticated
+    user_id = None
+    token = req.cookies.get("session_token")
+    if token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+            user_id = payload.get("user_id")
+        except jwt.PyJWTError:
+            pass
+        
     try:
-        short_code = add_url(long_url)
+        short_code = add_url(long_url, user_id=user_id)
     except Exception:
          raise HTTPException(status_code=500, detail="Failed to generate short URL")
     

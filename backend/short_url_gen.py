@@ -7,9 +7,11 @@ import redis
 # from validations import check_safe_browsing
 
 redis_client = redis.Redis(
-    host="localhost",
+    host="127.0.0.1",
     port=6379,
-    decode_responses=True
+    decode_responses=True,
+    socket_connect_timeout=0.1,
+    socket_timeout=0.1
 )
 
 
@@ -30,9 +32,11 @@ def get_unique_id() -> str:
     return generator.next_id()
 
 
-def add_url(long_url : str):
+from typing import Optional
+
+def add_url(long_url : str, user_id: Optional[int] = None):
     
-    exists = is_long_url_exists(long_url)
+    exists = is_long_url_exists(long_url, user_id=user_id)
     if exists:
         return exists
     short_url = get_short_url()
@@ -40,14 +44,17 @@ def add_url(long_url : str):
         short_url=short_url,
         long_url=long_url,
         created_at= datetime.now(UTC),
-        click_count=0
+        click_count=0,
+        user_id=user_id
     )
-    
-    redis_client.set(
-        short_url,
-        long_url,
-        ex=3600
-        )
+    try:
+        redis_client.set(
+            short_url,
+            long_url,
+            ex=3600
+            )
+    except:
+        print("Warning: Redis is Offline falling back to DataBase.")
     add_to_db(url)
     return short_url
 
@@ -55,25 +62,24 @@ def ban_in_cache(short_url: str):
     redis_client.set(short_url, "BANNED", ex=3600)
 
 def serve_url(short_url : str):
-    
-    # start_time = time.perf_counter()
-    cached = redis_client.get(short_url)
-    # end_time = time.perf_counter()
-
+    cached = None
+    try:
+        cached = redis_client.get(short_url)
+    except:
+        print("Warning: Reddis Offline, Fallback to DataBase.")
     if cached:
         return cached
-        # print(f"redis time : {(end_time-start_time)*1000}")
     else:   
-        # start_time = time.perf_counter()
         long_url = get_long_url(short_url)
-        # end_time = time.perf_counter()
         if long_url:
-            redis_client.set(
-                short_url,
-                long_url,
-                ex = 3600
-            )
-            # print(f"DB time : {(end_time-start_time)*1000}")
+            if cached:
+                redis_client.set(
+                    short_url,
+                    long_url,
+                    ex = 3600
+                )
+            else:
+                print("Warning: Redis Offline, No cache storage available.")
             return long_url
             
         else:

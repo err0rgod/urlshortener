@@ -45,11 +45,15 @@ def mark_url_banned(short_url: str):
             session.add(url)
             session.commit()
     
-def is_long_url_exists(long_url : str):
+def is_long_url_exists(long_url : str, user_id: Optional[int] = None):
     with Session(engine) as session:
         statement = select(urldata).where(urldata.long_url == long_url)
         results = session.exec(statement).first()
         if results is not None:
+            if user_id and results.user_id is None:
+                results.user_id = user_id
+                session.add(results)
+                session.commit()
             return results.short_url
         else: 
             return None
