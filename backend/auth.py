@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 import jwt
 import httpx
-from datetime import datetime, time
+import time
 from database import get_user_by_email, create_user
 import os
 from dotenv import load_dotenv
@@ -22,10 +22,10 @@ async def google_login():
     Step A: Redirect the user to Google's OAuth consent screen.
     """
     google_auth_url = (
-        "https://account.google.com/o/oauth2/v2/auth"
+        "https://accounts.google.com/o/oauth2/v2/auth"
         f"?response_type=code"
         f"&client_id={GOOGLE_CLIENT_ID}"
-        f"&redirect_url={GOOGLE_REDIRECT_URL}"
+        f"&redirect_uri={GOOGLE_REDIRECT_URL}"
         f"&scope=openid%20profile%20email"
         f"&prompt=select_account"
     )
@@ -87,7 +87,7 @@ async def google_callback(code : str , response : RedirectResponse):
     payload = {
         "user_id" : user.id,
         "email" : user.email,
-        "exp": time() + 604800 # long lasting - 7 days
+        "exp": time.time() + 604800 # long lasting - 7 days
     }
 
     sesison_token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
