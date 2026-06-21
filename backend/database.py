@@ -21,6 +21,13 @@ def add_to_db(data : urldata):
         session.add(data)
         session.commit()
 
+def is_alias_exists(custom_alias : str) -> bool:
+    with Session(engine) as session:
+        statement = select(urldata).where(urldata.short_url == custom_alias)
+        url = session.exec(statement).first()
+        if url:
+            return True
+        return False
 
 def get_long_url(short_url) -> str:
     with Session(engine) as session:

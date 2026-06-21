@@ -2,7 +2,7 @@ from sonyflake import SonyFlake
 from datetime import datetime , UTC
 from base62 import encode_base62
 from models import urldata
-from database import add_to_db, get_long_url, is_long_url_exists, mark_url_banned
+from database import add_to_db, get_long_url, is_long_url_exists, mark_url_banned, is_alias_exists
 import redis
 # from validations import check_safe_browsing
 
@@ -57,6 +57,31 @@ def add_url(long_url : str, user_id: Optional[int] = None):
         print("Warning: Redis is Offline falling back to DataBase.")
     add_to_db(url)
     return short_url
+
+
+def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None):
+    does_exists = is_alias_exists(custom_alias)
+    if does_exists:
+        return None
+    else:
+        url = urldata(
+            short_url=custom_alias,
+            long_url=long_url,
+            created_at=datetime.now(UTC),
+            click_count=0,
+            user_id=user_id
+        )
+        try:
+            redis_client.set(
+                custom_alias,
+                long_url,
+                ex=3600
+                )
+        except:
+            print("Warning: Redis is Offline falling back to DataBase.")
+        add_to_db(url)
+        return custom_alias
+
 
 def ban_in_cache(short_url: str):
     redis_client.set(short_url, "BANNED", ex=3600)

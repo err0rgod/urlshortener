@@ -64,13 +64,27 @@
             <!-- Quick Trial Shortener Widget -->
             <div class="max-w-xl mx-auto bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm text-left">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Try it instantly</h3>
-                <form id="shorten-form" class="flex flex-col sm:flex-row gap-2">
-                    <input type="text" id="long_url" placeholder="Paste your long link here (e.g. https://google.com)" required
-                        class="flex-grow px-4 py-3 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
-                    <button type="submit" 
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 whitespace-nowrap">
-                        Shorten Link
-                    </button>
+                <form id="shorten-form" class="space-y-4">
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" id="long_url" placeholder="Paste your long link here (e.g. https://google.com)" required
+                            class="flex-grow px-4 py-3 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
+                        <button type="submit" 
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 whitespace-nowrap">
+                            Shorten Link
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-col gap-2">
+                        <label class="inline-flex items-center text-xs font-semibold text-slate-500 cursor-pointer select-none">
+                            <input type="checkbox" id="enable-alias" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4">
+                            <span>Use Custom Alias</span>
+                        </label>
+                        
+                        <div id="alias-container" class="hidden transition-all duration-200 ease-in-out">
+                            <input type="text" id="custom_alias" placeholder="Enter custom alias (e.g. my-promo-link)"
+                                class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
+                        </div>
+                    </div>
                 </form>
                 
                 <div id="error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
@@ -370,6 +384,21 @@
         const shortUrlInput = document.getElementById('short_url');
         const copyBtn = document.getElementById('copy-btn');
 
+        // Toggle custom alias visibility
+        const enableAliasCheckbox = document.getElementById('enable-alias');
+        const aliasContainer = document.getElementById('alias-container');
+        const customAliasInput = document.getElementById('custom_alias');
+
+        enableAliasCheckbox.addEventListener('change', () => {
+            if (enableAliasCheckbox.checked) {
+                aliasContainer.classList.remove('hidden');
+                customAliasInput.focus();
+            } else {
+                aliasContainer.classList.add('hidden');
+                customAliasInput.value = '';
+            }
+        });
+
         // Form submission action
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -377,9 +406,12 @@
             resultEl.classList.add('hidden');
 
             const long_url = document.getElementById('long_url').value;
+            const enable_alias = enableAliasCheckbox.checked;
+            const custom_alias = enable_alias ? customAliasInput.value.trim() : '';
 
             try {
-                const response = await fetch('/shorten', {
+                const url = custom_alias ? `/shorten?custom_alias=${encodeURIComponent(custom_alias)}` : '/shorten';
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ long_url })

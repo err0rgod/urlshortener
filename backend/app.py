@@ -9,11 +9,12 @@ if BASE_DIR not in sys.path:
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
-from short_url_gen import add_url, serve_url, ban_in_cache
+from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
 from database import mark_url_banned, init_db
 from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
+from typing import Optional
 import time
 import jwt
 
@@ -102,7 +103,7 @@ async def get_short_give_long(short_url: str):
     raise HTTPException(status_code=404, detail="Short URL not found")
 
 @app.post("/shorten")
-async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks):
+async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None  ):
     long_url = request.long_url
     
     if not await is_valid_url(long_url):
@@ -119,13 +120,18 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             pass
         
     try:
-        short_code = add_url(long_url, user_id=user_id)
+        if custom_alias:
+            short_code = add_custom_url(long_url,custom_alias,user_id=user_id)
+        else:
+            short_code = add_url(long_url, user_id=user_id)
     except Exception:
          raise HTTPException(status_code=500, detail="Failed to generate short URL")
     
     # Trigger Safe Browsing check in the background
-    background_tasks.add_task(background_safe_browsing_check, short_code, long_url)
-    
+    if short_code:
+        background_tasks.add_task(background_safe_browsing_check, short_code, long_url)
+    else:
+        raise HTTPException(status_code=500,detail="Invalid Shortened URL.")
     # Construct the full short URL using the request base URL
     base_url = str(req.base_url).rstrip("/")
     full_short_url = f"{base_url}/{short_code}"
