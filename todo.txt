@@ -1,10 +1,4 @@
-features: add analytics 
-        total clicks 
-        unique vistors
-        country 
-        browser 
-        device 
-        refferer
+
 
 features: dashboard 
 features: library & other integration addons 

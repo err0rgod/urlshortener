@@ -1,108 +1,127 @@
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 import jwt
-import httpx
 import time
-from database import get_user_by_email, create_user
+from database import get_user_by_email, create_user, engine
+from models import User
+from sqlmodel import Session, select
 import os
 from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, auth
+from pydantic import BaseModel
 
 load_dotenv()
 router = APIRouter()
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-GOOGLE_REDIRECT_URL = "http://localhost:8000/auth/google/callback"
+FIREBASE_ADMIN_SDK_JSON = os.getenv("FIREBASE_ADMIN_SDK_JSON")
+
+# Initialize Firebase Admin SDK if not already initialized
+if not firebase_admin._apps:
+    try:
+        cred_path = FIREBASE_ADMIN_SDK_JSON
+        if not os.path.isabs(cred_path):
+            parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            cred_path = os.path.join(parent_dir, cred_path)
+            
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+    except Exception as e:
+        print(f"Error initializing Firebase Admin: {e}")
 
 
-@router.get("/auth/login/google")
-async def google_login():
-    """
-    Step A: Redirect the user to Google's OAuth consent screen.
-    """
-    google_auth_url = (
-        "https://accounts.google.com/o/oauth2/v2/auth"
-        f"?response_type=code"
-        f"&client_id={GOOGLE_CLIENT_ID}"
-        f"&redirect_uri={GOOGLE_REDIRECT_URL}"
-        f"&scope=openid%20profile%20email"
-        f"&prompt=select_account"
-    )
-    return RedirectResponse(google_auth_url)
+class SessionRequest(BaseModel):
+    idToken: str
 
 
-@router.get("/auth/google/callback")
-async def google_callback(code : str , response : RedirectResponse):
-    """
-    Step B: Handle Google redirection, exchange the auth code for a profile,
-    and sign a JWT token.
-    """
-    if not code :
-        raise HTTPException(status_code=400, detail= "Authorization code missing.")
+@router.get("/auth/check-username")
+async def check_username(username: str):
+    username = username.strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="Username cannot be empty")
+    with Session(engine) as session:
+        stmt = select(User).where(User.full_name == username)
+        existing = session.exec(stmt).first()
+        if existing:
+            return {"available": False}
+        return {"available": True}
 
-    # exchange auth code for access token 
-    token_url = "https://oauth2.googleapis.com/token"
-    token_data = {
-        "code": code,
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uri": GOOGLE_REDIRECT_URL,
-        "grant_type":"authorization_code",
-    } 
 
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(token_url,data=token_data)
-        if token_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to exchange code for token.")
-        
-        tokens = token_resp.json()
-        access_token = tokens.get("access_token")
-
-        # getting userinfo using the access token 
-        userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
-        headers = {"Authorization":f"Bearer {access_token}"}
-        userinfo_resp = await client.get(userinfo_url,headers=headers)
-        if userinfo_resp.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to fetch User profile.")
-        
-        profile = userinfo_resp.json()
-
-    email = profile.get("email")
-    full_name = profile.get("name", "User")
-    oauth_id = profile.get("sub")
+@router.post("/auth/session")
+async def create_session(data: SessionRequest):
+    id_token = data.idToken
+    try:
+        # Verify the ID token sent by the client
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token.get("uid")
+        email = decoded_token.get("email")
+        full_name = decoded_token.get("name", "User")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid Firebase ID token: {str(e)}")
 
     if not email:
-        raise HTTPException(status_code=400, detail="Email not provided by google account.")
+        raise HTTPException(status_code=400, detail="Email is required but not provided by Firebase account.")
+
+    # Find or create user in local Postgres DB
     user = get_user_by_email(email)
     if not user:
+        # Check if username (full_name) is taken
+        with Session(engine) as session:
+            stmt = select(User).where(User.full_name == full_name)
+            existing_username = session.exec(stmt).first()
+            if existing_username:
+                provider = decoded_token.get("firebase", {}).get("sign_in_provider")
+                if provider == "google.com":
+                    import random
+                    full_name = f"{full_name}{random.randint(100, 999)}"
+                else:
+                    raise HTTPException(status_code=400, detail="This username is already taken. Please choose another one.")
+
         user = create_user(
             email=email,
             full_name=full_name,
-            oauth_provider="google",
-            oauth_id=oauth_id
+            oauth_provider="firebase",
+            oauth_id=uid
         )
+    elif user.oauth_provider != "firebase":
+        # Link account to Firebase provider
+        with Session(engine) as session:
+            db_user = session.get(User, user.id)
+            if db_user:
+                db_user.oauth_provider = "firebase"
+                db_user.oauth_id = uid
+                session.add(db_user)
+                session.commit()
+                session.refresh(db_user)
+                user = db_user
 
-    # generate session jwt bro 
+    # Generate session JWT
     payload = {
         "user_id" : user.id,
         "email" : user.email,
-        "exp": time.time() + 604800 # long lasting - 7 days
+        "exp": time.time() + 604800 # 7 days
     }
+    session_token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
 
-    sesison_token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
-
-    # redirect home and set the Jwt in httpOnly 
-    redirect_response = RedirectResponse(url="/")
-    redirect_response.set_cookie(
+    # Set JWT in httpOnly cookie
+    json_response = JSONResponse(content={
+        "logged_in": True,
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name
+        }
+    })
+    json_response.set_cookie(
         key="session_token",
-        value=sesison_token,
+        value=session_token,
         httponly=True,
         max_age=604800,
         samesite="lax",
         secure=False
     )
-    return redirect_response
+    return json_response
 
 
 @router.get("/auth/logout")
@@ -111,8 +130,9 @@ async def logout():
     response.delete_cookie(key="session_token")
     return response
 
+
 @router.get("/auth/me")
-async def get_me(request : Request):
+async def get_me(request: Request):
     """
     Check if user is authenticated.
     """
@@ -120,7 +140,7 @@ async def get_me(request : Request):
     if not token:
          return {"logged_in": False}
     try:
-        payload = jwt.decode(token,JWT_SECRET_KEY,algorithms=["HS256"])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         email = payload.get("email")
 
         user = get_user_by_email(email)
@@ -136,4 +156,4 @@ async def get_me(request : Request):
             }
         }
     except jwt.PyJWTError:
-        return {"logged_in":False}
+        return {"logged_in": False}

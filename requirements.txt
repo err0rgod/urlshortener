@@ -7,3 +7,4 @@ python-dotenv
 sonyflake-py
 psycopg2-binary
 pydantic[email]
+firebase-admin

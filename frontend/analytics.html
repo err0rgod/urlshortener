@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexURL - Analytics Dashboard</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+    
+    <!-- Top Navigation Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/" class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    <span>FlexURL</span>
+                </a>
+            </div>
+            <div id="auth-nav-container" class="flex items-center space-x-4">
+                <a href="/" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Create Links</a>
+                <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
+                    Log Out
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Loading State -->
+        <div id="loading-state" class="flex flex-col items-center justify-center py-20">
+            <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p class="mt-4 text-sm text-slate-500 font-medium">Loading link analytics...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden flex-col items-center justify-center py-16 text-center max-w-md mx-auto">
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-8 shadow-sm">
+                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 mb-2">Access Denied or Not Found</h3>
+                <p id="error-message" class="text-xs text-slate-500 mb-6">You do not have permission to view this URL's analytics, or it does not exist.</p>
+                <a href="/" class="inline-flex justify-center bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2.5 px-4 rounded-lg transition-colors">
+                    Back to Home
+                </a>
+            </div>
+        </div>
+
+        <!-- Analytics Visualizations -->
+        <div id="analytics-content" class="hidden space-y-8">
+            
+            <!-- Link Info Header -->
+            <div class="glass-panel rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="space-y-1.5">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        Short Link Analytics
+                    </span>
+                    <h2 class="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <span id="display-short-url"></span>
+                        <button id="copy-btn" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy URL">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                        </button>
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium flex items-center gap-1.5 truncate max-w-xl">
+                        Destination: <a id="display-long-url" target="_blank" href="#" class="text-indigo-600 hover:underline truncate"></a>
+                    </p>
+                </div>
+                <div class="text-left md:text-right border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created On</p>
+                    <p id="display-created-at" class="text-sm font-semibold text-slate-800"></p>
+                </div>
+            </div>
+
+            <!-- Overview Metrics Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Card 1: Clicks -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Total Clicks</p>
+                        <h3 id="metric-clicks" class="text-2xl font-extrabold text-slate-900 tracking-tight">0</h3>
+                    </div>
+                </div>
+
+                <!-- Card 2: Top Referrer -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 10.742s-1.922-.178-2.61.41c-.687.587-.367 1.488-.367 1.488s1.61 2.28 2.502 2.87c.892.59 2.052.285 2.052.285s1.85-.925 2.684-2.115c.835-1.19.467-2.316.467-2.316s-2.106-.212-2.906.495c-.8.707-1.822-.847-1.822-.847z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.5 6.5a2.5 2.5 0 115 0 2.5 2.5 0 01-5 0z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Top Source</p>
+                        <h3 id="metric-source" class="text-lg font-extrabold text-slate-900 tracking-tight truncate max-w-[150px]">N/A</h3>
+                    </div>
+                </div>
+
+                <!-- Card 3: Top Country -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h2a2 2 0 002-2V8.065M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Top Location</p>
+                        <h3 id="metric-location" class="text-lg font-extrabold text-slate-900 tracking-tight truncate max-w-[150px]">N/A</h3>
+                    </div>
+                </div>
+
+                <!-- Card 4: Top Device -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-medium">Top Device</p>
+                        <h3 id="metric-device" class="text-lg font-extrabold text-slate-900 tracking-tight truncate max-w-[150px]">N/A</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Panel -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <h3 class="text-sm font-bold text-slate-900 mb-4 tracking-tight">Clicks Over Time</h3>
+                <div class="h-72 w-full relative">
+                    <canvas id="clicksChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Grids of Metrics Breakdown -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                
+                <!-- Referrers Panel -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900 tracking-tight">Referrers & Channels</h3>
+                    <div id="referrer-list" class="space-y-3.5">
+                        <!-- Render dynamically -->
+                    </div>
+                </div>
+
+                <!-- Countries Panel -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900 tracking-tight">Geo Location / Countries</h3>
+                    <div id="country-list" class="space-y-3.5">
+                        <!-- Render dynamically -->
+                    </div>
+                </div>
+
+                <!-- Browsers Panel -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900 tracking-tight">Web Browsers</h3>
+                    <div id="browser-list" class="space-y-3.5">
+                        <!-- Render dynamically -->
+                    </div>
+                </div>
+
+                <!-- Devices Panel -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                    <h3 class="text-sm font-bold text-slate-900 tracking-tight">Devices & Platforms</h3>
+                    <div id="device-list" class="space-y-3.5">
+                        <!-- Render dynamically -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 px-4 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400">
+                &copy; 2026 err0god. All rights reserved.
+            </div>
+            <div class="flex space-x-6 text-xs text-slate-400">
+                <a href="/" class="hover:text-indigo-600 transition-colors">Create Short URL</a>
+                <a href="https://github.com/err0god" target="_blank" class="hover:text-indigo-600 transition-colors">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Injected data from backend
+        window.__INITIAL_DATA__ = null;
+
+        // Extract short_url path parameter from URL path `/analytics/{short_url}`
+        const pathSegments = window.location.pathname.split('/');
+        const shortUrlCode = pathSegments[pathSegments.length - 1];
+
+        // Format dates beautifully
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            } catch {
+                return dateStr;
+            }
+        }
+
+        // Helper to construct progress bar list items
+        function renderProgressList(elementId, items, labelKey, countKey, totalClicks, bgClass) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            if (!items || items.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">No data tracked yet</div>`;
+                return;
+            }
+
+            items.sort((a, b) => b[countKey] - a[countKey]);
+
+            items.forEach(item => {
+                const label = item[labelKey] || 'Direct / Email';
+                const count = item[countKey] || 0;
+                const percentage = totalClicks > 0 ? Math.round((count / totalClicks) * 100) : 0;
+
+                const row = document.createElement('div');
+                row.className = 'space-y-1';
+                row.innerHTML = `
+                    <div class="flex justify-between items-center text-xs font-semibold">
+                        <span class="text-slate-700">${label}</span>
+                        <span class="text-slate-500">${count} (${percentage}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                        <div class="${bgClass} h-2 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        async function fetchAnalytics() {
+            try {
+                let data = window.__INITIAL_DATA__;
+                
+                if (!data) {
+                    const response = await fetch(`/api/analytics/${shortUrlCode}`);
+                    
+                    if (response.status === 401) {
+                        // Redirect unauthorized users to login
+                        window.location.href = `/login`;
+                        return;
+                    }
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        document.getElementById('error-message').textContent = errorData.detail || 'Failed to fetch analytics statistics.';
+                        document.getElementById('loading-state').classList.add('hidden');
+                        document.getElementById('error-state').classList.remove('hidden');
+                        return;
+                    }
+
+                    data = await response.json();
+                }
+                
+                // Populate Headers & Info
+                document.getElementById('display-short-url').textContent = window.location.origin + '/' + data.short_url;
+                const longUrlEl = document.getElementById('display-long-url');
+                longUrlEl.href = data.long_url;
+                longUrlEl.textContent = data.long_url;
+                document.getElementById('display-created-at').textContent = formatDate(data.created_at);
+
+                // Populate Top Overview Metrics
+                document.getElementById('metric-clicks').textContent = data.total_clicks;
+                
+                if (data.by_referer && data.by_referer.length > 0) {
+                    document.getElementById('metric-source').textContent = data.by_referer[0].referer || 'Direct/Email';
+                }
+                if (data.by_country && data.by_country.length > 0) {
+                    document.getElementById('metric-location').textContent = data.by_country[0].country || 'Unknown';
+                }
+                if (data.by_device && data.by_device.length > 0) {
+                    document.getElementById('metric-device').textContent = data.by_device[0].device || 'Desktop';
+                }
+
+                // Render lists with percentages
+                renderProgressList('referrer-list', data.by_referer, 'referer', 'clicks', data.total_clicks, 'bg-emerald-500');
+                renderProgressList('country-list', data.by_country, 'country', 'clicks', data.total_clicks, 'bg-rose-500');
+                renderProgressList('browser-list', data.by_browser, 'browser', 'clicks', data.total_clicks, 'bg-indigo-500');
+                renderProgressList('device-list', data.by_device, 'device', 'clicks', data.total_clicks, 'bg-amber-500');
+
+                // Render Time-Series Chart
+                renderChart(data.by_date);
+
+                // Hide loader and show content
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('analytics-content').classList.remove('hidden');
+
+                // Copy button functionality
+                const copyBtn = document.getElementById('copy-btn');
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(window.location.origin + '/' + data.short_url);
+                    const originalSvg = copyBtn.innerHTML;
+                    copyBtn.innerHTML = `<svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+                    setTimeout(() => copyBtn.innerHTML = originalSvg, 2000);
+                };
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('error-message').textContent = 'An error occurred while connecting to the analytics server.';
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('error-state').classList.remove('hidden');
+            }
+        }
+
+        function renderChart(byDateData) {
+            const canvas = document.getElementById('clicksChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Fallback for empty data
+            if (!byDateData || byDateData.length === 0) {
+                ctx.font = '12px Inter';
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText('No history data available yet', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            // Extract labels and data points
+            const labels = byDateData.map(item => formatDate(item.date));
+            const clicks = byDateData.map(item => item.clicks);
+
+            // Create gradient fills
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.35)');
+            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.01)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Clicks',
+                        data: clicks,
+                        borderColor: '#4f46e5',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#4f46e5',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.35
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#1e293b',
+                            titleFont: { family: 'Inter', size: 12, weight: 'semibold' },
+                            bodyFont: { family: 'Inter', size: 12 },
+                            padding: 10,
+                            cornerRadius: 8,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: { family: 'Inter', size: 10 },
+                                color: '#64748b'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                borderDash: [5, 5],
+                                color: '#e2e8f0'
+                            },
+                            ticks: {
+                                stepSize: 1,
+                                font: { family: 'Inter', size: 10 },
+                                color: '#64748b'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchAnalytics);
+    </script>
+</body>
+</html>

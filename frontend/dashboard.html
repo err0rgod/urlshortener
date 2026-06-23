@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexURL - User Dashboard</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+    
+    <!-- Top Navigation Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/" class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    <span>FlexURL</span>
+                </a>
+            </div>
+            <div id="auth-nav-container" class="flex items-center space-x-4">
+                <a href="/" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Create Links</a>
+                <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
+                    Log Out
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Welcome banner -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">User Dashboard</h1>
+                <p id="user-greeting" class="text-sm text-slate-500 font-medium">Hello, err0rgod</p>
+            </div>
+        </div>
+
+        <!-- Metrics cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <!-- Card 1 -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">Total Links</p>
+                    <h3 id="stat-total-links" class="text-2xl font-extrabold text-slate-900 tracking-tight">0</h3>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">Total Link Clicks</p>
+                    <h3 id="stat-total-clicks" class="text-2xl font-extrabold text-slate-900 tracking-tight">0</h3>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex items-center gap-4">
+                <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400 font-medium">Banned Links</p>
+                    <h3 id="stat-banned-links" class="text-2xl font-extrabold text-slate-900 tracking-tight">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Links table section -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+            <div class="p-5 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <h3 class="text-sm font-bold text-slate-900 tracking-tight">My Shortened Links</h3>
+                <div class="w-full sm:w-72 relative">
+                    <input type="text" id="search-input" placeholder="Search by short URL or destination..."
+                        class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
+                    <div class="absolute left-3 top-2.5 text-slate-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loader inside table -->
+            <div id="table-loader" class="py-16 text-center">
+                <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p class="mt-3 text-xs text-slate-500 font-medium">Loading links...</p>
+            </div>
+
+            <!-- Table empty state -->
+            <div id="table-empty" class="hidden py-16 text-center space-y-3.5 max-w-sm mx-auto">
+                <p class="text-slate-400 text-xs">No links created yet. Paste your first URL on the home page!</p>
+                <a href="/" class="inline-flex justify-center bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors">
+                    Shorten Your First Link
+                </a>
+            </div>
+
+            <!-- Links list container (Responsive Table & Card list) -->
+            <div id="table-container" class="hidden overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-100">
+                    <thead class="bg-slate-50/50">
+                        <tr>
+                            <th class="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Short URL</th>
+                            <th class="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Destination</th>
+                            <th class="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Created</th>
+                            <th class="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Clicks</th>
+                            <th class="px-6 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="links-tbody" class="divide-y divide-slate-100">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <!-- Danger Zone Card -->
+            <div class="bg-white border border-red-200 rounded-2xl p-6 shadow-sm space-y-4 mt-8">
+                <h3 class="text-sm font-bold text-red-600 tracking-tight flex items-center gap-2">
+                    <svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <span>Danger Zone</span>
+                </h3>
+                <p class="text-xs text-slate-500 leading-normal">
+                    Once you delete your account, there is no going back. All your shortened links and real-time click statistics will be permanently removed.
+                </p>
+                <div>
+                    <button onclick="showDeleteAccountModal()" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2.5 px-4 border border-red-200 rounded-lg transition-colors">
+                        Delete My Account
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-6 transform scale-95 transition-transform duration-300">
+            <div class="flex items-start gap-4">
+                <div id="confirm-modal-icon" class="p-3 rounded-xl flex-shrink-0">
+                    <!-- SVG icon dynamically set -->
+                </div>
+                <div class="space-y-1">
+                    <h3 id="confirm-modal-title" class="text-sm font-bold text-slate-900">Confirm Action</h3>
+                    <p id="confirm-modal-message" class="text-xs text-slate-500 leading-relaxed">Are you sure you want to proceed?</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button id="confirm-modal-cancel" onclick="closeConfirmModal()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold py-2 px-4 border border-slate-200 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button id="confirm-modal-confirm" class="text-xs font-semibold py-2 px-4 rounded-lg text-white transition-colors">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-6 px-4 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400">
+                &copy; 2026 err0god. All rights reserved.
+            </div>
+            <div class="flex space-x-6 text-xs text-slate-400">
+                <a href="/" class="hover:text-indigo-600 transition-colors">Create Short URL</a>
+                <a href="https://github.com/err0god" target="_blank" class="hover:text-indigo-600 transition-colors">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let allLinks = [];
+
+        // Fetch User and Auth details
+        async function fetchUserDetails() {
+            try {
+                const response = await fetch('/auth/me');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.logged_in) {
+                        document.getElementById('user-greeting').textContent = `Hello, ${data.user.full_name} (${data.user.email})`;
+                    } else {
+                        window.location.href = '/login';
+                    }
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+                window.location.href = '/login';
+            }
+        }
+
+        // Fetch user links list
+        async function fetchUserLinks() {
+            try {
+                const response = await fetch('/api/user/links');
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error("Failed to load user links");
+                }
+
+                allLinks = await response.json();
+                
+                // Set counts
+                document.getElementById('stat-total-links').textContent = allLinks.length;
+                
+                const totalClicks = allLinks.reduce((sum, link) => sum + (link.click_count || 0), 0);
+                document.getElementById('stat-total-clicks').textContent = totalClicks;
+                
+                const bannedLinks = allLinks.filter(link => link.is_banned).length;
+                document.getElementById('stat-banned-links').textContent = bannedLinks;
+
+                renderLinks(allLinks);
+            } catch (err) {
+                console.error(err);
+                document.getElementById('table-loader').innerHTML = `
+                    <div class="text-xs text-red-500 font-semibold py-8">
+                        Error loading your links list. Please refresh the page.
+                    </div>
+                `;
+            }
+        }
+
+        // Render Links list in the table
+        function renderLinks(links) {
+            const tbody = document.getElementById('links-tbody');
+            const loader = document.getElementById('table-loader');
+            const empty = document.getElementById('table-empty');
+            const table = document.getElementById('table-container');
+
+            tbody.innerHTML = '';
+            loader.classList.add('hidden');
+
+            if (links.length === 0) {
+                empty.classList.remove('hidden');
+                table.classList.add('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            table.classList.remove('hidden');
+
+            links.forEach(link => {
+                const fullShortUrl = window.location.origin + '/' + link.short_url;
+                
+                // Format Date
+                let createdDate = 'N/A';
+                if (link.created_at) {
+                    createdDate = new Date(link.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                }
+
+                // Check active/expired/banned status
+                let statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">Active</span>`;
+                if (link.is_banned) {
+                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700">Banned</span>`;
+                } else if (link.exp_time && new Date(link.exp_time) < new Date()) {
+                    statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">Expired</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
+                        <div class="flex items-center gap-1.5">
+                            <a href="${fullShortUrl}" target="_blank" class="hover:underline hover:text-indigo-600">${link.short_url}</a>
+                            <button onclick="copyToClipboard('${fullShortUrl}', this)" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 max-w-xs truncate text-xs text-slate-500 font-medium" title="${link.long_url}">
+                        <a href="${link.long_url}" target="_blank" class="hover:underline">${link.long_url}</a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500 font-medium">
+                        ${createdDate}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-900 font-bold">
+                        ${link.click_count || 0}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-xs">
+                        ${statusBadge}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold space-x-2">
+                        <a href="/analytics/${link.short_url}" class="text-indigo-600 hover:text-indigo-800 transition-colors">Analytics</a>
+                        <button onclick="confirmDeleteLink('${link.short_url}')" class="text-rose-600 hover:text-rose-800 transition-colors">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Copy Helper
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text);
+            const originalSvg = btn.innerHTML;
+            btn.innerHTML = `<svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
+            setTimeout(() => btn.innerHTML = originalSvg, 2000);
+        }
+
+        // Custom Modal and Alert Controller
+        let activeConfirmCallback = null;
+
+        function showConfirmModal({ title, message, iconType, confirmText, confirmClass, onConfirm }) {
+            document.getElementById('confirm-modal-title').textContent = title;
+            document.getElementById('confirm-modal-message').textContent = message;
+            
+            const iconContainer = document.getElementById('confirm-modal-icon');
+            const confirmBtn = document.getElementById('confirm-modal-confirm');
+            const cancelBtn = document.getElementById('confirm-modal-cancel');
+            
+            // Set buttons
+            confirmBtn.textContent = confirmText || 'Confirm';
+            confirmBtn.className = `text-xs font-semibold py-2 px-4 rounded-lg text-white transition-colors ${confirmClass || 'bg-indigo-600 hover:bg-indigo-700'}`;
+            if (cancelBtn) cancelBtn.classList.remove('hidden');
+            
+            // Set icon
+            if (iconType === 'danger') {
+                iconContainer.className = 'p-3 rounded-xl flex-shrink-0 bg-red-50 text-red-600';
+                iconContainer.innerHTML = `
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                `;
+            } else {
+                iconContainer.className = 'p-3 rounded-xl flex-shrink-0 bg-indigo-50 text-indigo-600';
+                iconContainer.innerHTML = `
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                `;
+            }
+
+            activeConfirmCallback = onConfirm;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove('scale-95');
+                modal.firstElementChild.classList.add('scale-100');
+            }, 50);
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirm-modal');
+            modal.firstElementChild.classList.remove('scale-100');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                activeConfirmCallback = null;
+            }, 150);
+        }
+
+        function showCustomAlert(message) {
+            showConfirmModal({
+                title: 'Notice',
+                message: message,
+                iconType: 'info',
+                confirmText: 'Okay',
+                confirmClass: 'bg-indigo-600 hover:bg-indigo-700',
+                onConfirm: () => {}
+            });
+            const cancelBtn = document.getElementById('confirm-modal-cancel');
+            if (cancelBtn) cancelBtn.classList.add('hidden');
+        }
+
+        document.getElementById('confirm-modal-confirm').addEventListener('click', () => {
+            if (activeConfirmCallback) {
+                activeConfirmCallback();
+            }
+            closeConfirmModal();
+        });
+
+        // Delete confirmation
+        function confirmDeleteLink(shortUrl) {
+            showConfirmModal({
+                title: 'Delete Short URL',
+                message: `Are you sure you want to delete the short URL /${shortUrl}? This will delete all click stats and cannot be undone.`,
+                iconType: 'danger',
+                confirmText: 'Delete Link',
+                confirmClass: 'bg-red-600 hover:bg-red-700',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/api/links/${shortUrl}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            await fetchUserLinks();
+                        } else {
+                            const err = await response.json();
+                            showCustomAlert(`Error: ${err.detail || 'Failed to delete link'}`);
+                        }
+                    } catch (err) {
+                        showCustomAlert('Failed to delete the link due to connection error.');
+                    }
+                }
+            });
+        }
+
+        // Account deletion
+        function showDeleteAccountModal() {
+            showConfirmModal({
+                title: 'Delete My Account',
+                message: 'Are you sure you want to delete your FlexURL account? This action is permanent and will delete all your shortened links, settings, and statistics.',
+                iconType: 'danger',
+                confirmText: 'Delete Permanently',
+                confirmClass: 'bg-red-600 hover:bg-red-700',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch('/api/user/account', {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            window.location.href = '/login';
+                        } else {
+                            const err = await response.json();
+                            showCustomAlert(`Error: ${err.detail || 'Failed to delete account'}`);
+                        }
+                    } catch (err) {
+                        showCustomAlert('Failed to delete account due to connection error.');
+                    }
+                }
+            });
+        }
+
+        // Filter and Search
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.toLowerCase().trim();
+            if (!query) {
+                renderLinks(allLinks);
+                return;
+            }
+
+            const filtered = allLinks.filter(link => 
+                link.short_url.toLowerCase().includes(query) || 
+                link.long_url.toLowerCase().includes(query)
+            );
+            renderLinks(filtered);
+        });
+
+        // Initialize Page
+        window.addEventListener('DOMContentLoaded', async () => {
+            await fetchUserDetails();
+            await fetchUserLinks();
+        });
+    </script>
+</body>
+</html>
