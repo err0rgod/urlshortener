@@ -88,6 +88,12 @@ async def privacy():
     with open(os.path.join(FRONTEND_DIR, "privacy.html"), encoding="utf-8") as f:
         return f.read()
 
+@app.get("/terms", response_class=HTMLResponse)
+async def terms():
+    with open(os.path.join(FRONTEND_DIR, "terms.html"), encoding="utf-8") as f:
+        return f.read()
+
+
 @app.get("/login", response_class=HTMLResponse)
 async def login():
     with open(os.path.join(FRONTEND_DIR, "login.html"), encoding="utf-8") as f:
