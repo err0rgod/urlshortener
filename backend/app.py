@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import asyncio
 
 # Ensure the backend directory is in python path for local imports
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
