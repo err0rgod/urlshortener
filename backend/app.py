@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
 from database import mark_url_banned, init_db, add_clicklog, engine
-from validations import is_valid_url, check_safe_browsing
+from validations import is_valid_url, check_safe_browsing, is_valid_custom_alias
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
@@ -477,8 +477,9 @@ async def analytics(short_url: str, request: Request):
     with open(os.path.join(FRONTEND_DIR, "analytics.html"), encoding="utf-8") as f:
         html_content = f.read()
 
-    # Inject statistics data
-    injected_js = f"window.__INITIAL_DATA__ = {json.dumps(analytics_data)};"
+    # Inject statistics data safely preventing JSON script tag injection XSS
+    json_str = json.dumps(analytics_data).replace("</", r"<\/").replace("<script", r"<\script")
+    injected_js = f"window.__INITIAL_DATA__ = {json_str};"
     html_content = html_content.replace("window.__INITIAL_DATA__ = null;", injected_js)
 
     return HTMLResponse(content=html_content)
@@ -514,6 +515,13 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
     
     if not await is_valid_url(long_url):
         raise HTTPException(status_code=400, detail="Invalid, insecure, or private URL")
+        
+    if custom_alias:
+        if not is_valid_custom_alias(custom_alias):
+            raise HTTPException(
+                status_code=400, 
+                detail="Custom alias must be 3-20 characters long, contain only letters, numbers, dashes or underscores, and cannot be a reserved system route."
+            )
         
     # Extract user_id if user is authenticated
     user_id = None
