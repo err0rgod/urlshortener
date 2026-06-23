@@ -18,3 +18,7 @@ env/
 
 # Firebase credentials
 flexurlapp-firebase-adminsdk-*.json
+
+# Logs
+*.log
+backend/logs/
