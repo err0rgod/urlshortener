@@ -155,37 +155,57 @@
             </div>
 
             <!-- Grids of Metrics Breakdown -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
                 <!-- Referrers Panel -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
                     <h3 class="text-sm font-bold text-slate-900 tracking-tight">Referrers & Channels</h3>
-                    <div id="referrer-list" class="space-y-3.5">
-                        <!-- Render dynamically -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                        <div class="h-44 relative">
+                            <canvas id="referrerChart"></canvas>
+                        </div>
+                        <div id="referrer-list" class="space-y-3">
+                            <!-- Rendered dynamically -->
+                        </div>
                     </div>
                 </div>
 
                 <!-- Countries Panel -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
                     <h3 class="text-sm font-bold text-slate-900 tracking-tight">Geo Location / Countries</h3>
-                    <div id="country-list" class="space-y-3.5">
-                        <!-- Render dynamically -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                        <div class="h-44 relative">
+                            <canvas id="countryChart"></canvas>
+                        </div>
+                        <div id="country-list" class="space-y-3">
+                            <!-- Rendered dynamically -->
+                        </div>
                     </div>
                 </div>
 
                 <!-- Browsers Panel -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
                     <h3 class="text-sm font-bold text-slate-900 tracking-tight">Web Browsers</h3>
-                    <div id="browser-list" class="space-y-3.5">
-                        <!-- Render dynamically -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                        <div class="h-44 relative">
+                            <canvas id="browserChart"></canvas>
+                        </div>
+                        <div id="browser-list" class="space-y-3">
+                            <!-- Rendered dynamically -->
+                        </div>
                     </div>
                 </div>
 
                 <!-- Devices Panel -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
                     <h3 class="text-sm font-bold text-slate-900 tracking-tight">Devices & Platforms</h3>
-                    <div id="device-list" class="space-y-3.5">
-                        <!-- Render dynamically -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
+                        <div class="h-44 relative">
+                            <canvas id="deviceChart"></canvas>
+                        </div>
+                        <div id="device-list" class="space-y-3">
+                            <!-- Rendered dynamically -->
+                        </div>
                     </div>
                 </div>
 
@@ -312,6 +332,12 @@
                 // Render Time-Series Chart
                 renderChart(data.by_date);
 
+                // Render visual charts (Choice 3)
+                createBarChart('referrerChart', data.by_referer, 'referer', 'clicks', '#10b981');
+                createDoughnutChart('countryChart', data.by_country, 'country', 'clicks', ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3', '#ffe4e6']);
+                createDoughnutChart('browserChart', data.by_browser, 'browser', 'clicks', ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe']);
+                createDoughnutChart('deviceChart', data.by_device, 'device', 'clicks', ['#d97706', '#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7']);
+
                 // Hide loader and show content
                 document.getElementById('loading-state').classList.add('hidden');
                 document.getElementById('analytics-content').classList.remove('hidden');
@@ -331,6 +357,136 @@
                 document.getElementById('loading-state').classList.add('hidden');
                 document.getElementById('error-state').classList.remove('hidden');
             }
+        }
+
+        // Helper to construct interactive Doughnut charts (Choice 3)
+        function createDoughnutChart(canvasId, items, labelKey, countKey, colors) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Clean up old instances if they exist
+            const existingChart = Chart.getChart(canvasId);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            if (!items || items.length === 0) {
+                ctx.font = '11px Inter';
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data tracked', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const labels = items.map(item => item[labelKey] || 'Unknown');
+            const dataPoints = items.map(item => item[countKey] || 0);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataPoints,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleFont: { family: 'Inter', size: 11, weight: 'semibold' },
+                            bodyFont: { family: 'Inter', size: 11 },
+                            padding: 8,
+                            cornerRadius: 6,
+                            displayColors: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helper to construct interactive Horizontal Bar charts (Choice 3)
+        function createBarChart(canvasId, items, labelKey, countKey, color) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            const existingChart = Chart.getChart(canvasId);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            if (!items || items.length === 0) {
+                ctx.font = '11px Inter';
+                ctx.fillStyle = '#94a3b8';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data tracked', canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            const labels = items.map(item => item[labelKey] || 'Direct/Email');
+            const dataPoints = items.map(item => item[countKey] || 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataPoints,
+                        backgroundColor: color,
+                        borderRadius: 4,
+                        maxBarThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleFont: { family: 'Inter', size: 11, weight: 'semibold' },
+                            bodyFont: { family: 'Inter', size: 11 },
+                            padding: 8,
+                            cornerRadius: 6,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: { family: 'Inter', size: 9 },
+                                color: '#64748b',
+                                stepSize: 1
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: { family: 'Inter', size: 9 },
+                                color: '#64748b'
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         function renderChart(byDateData) {

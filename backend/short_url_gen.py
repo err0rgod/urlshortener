@@ -34,14 +34,16 @@ def get_unique_id() -> str:
 
 from typing import Optional
 
-def add_url(long_url : str, user_id: Optional[int] = None,exp_time : Optional[int] = None):
+def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[int | datetime] = None):
     
     exists = is_long_url_exists(long_url, user_id=user_id)
     if exists:
         return exists
     db_exp_time = None
-    if exp_time:
-        db_exp_time= datetime.now() + timedelta(hours=exp_time)
+    if isinstance(exp_time, datetime):
+        db_exp_time = exp_time
+    elif isinstance(exp_time, int):
+        db_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
     short_url = get_short_url()
     url = urldata(
         short_url=short_url,
@@ -63,7 +65,7 @@ def add_url(long_url : str, user_id: Optional[int] = None,exp_time : Optional[in
     return short_url
 
 
-def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_time : Optional[int] = None):
+def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_time : Optional[int | datetime] = None):
     exists = is_long_url_exists(long_url)
     if exists:
         return exists
@@ -72,7 +74,9 @@ def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_ti
         return None
     else:
         db_exp_time = None
-        if exp_time:
+        if isinstance(exp_time, datetime):
+            db_exp_time = exp_time
+        elif isinstance(exp_time, int):
             db_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
         url = urldata(
             short_url=custom_alias,

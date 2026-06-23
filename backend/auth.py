@@ -152,7 +152,9 @@ async def get_me(request: Request):
             "user" : {
                 "id" : user.id,
                 "email" : user.email,
-                "full_name" : user.full_name
+                "full_name" : user.full_name,
+                "tier": user.tier,
+                "created_at": user.created_at.isoformat() if user.created_at else None
             }
         }
     except jwt.PyJWTError:

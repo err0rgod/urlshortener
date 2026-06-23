@@ -230,6 +230,47 @@ async def dashboard(request: Request):
     with open(os.path.join(FRONTEND_DIR, "dashboard.html"), encoding="utf-8") as f:
         return f.read()
 
+@app.get("/api/user/recent-clicks")
+async def get_recent_clicks(request: Request, limit: int = 10):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    with Session(engine) as db_session:
+        user_links_stmt = select(urldata.short_url).where(urldata.user_id == user_id)
+        user_short_urls = db_session.exec(user_links_stmt).all()
+        if not user_short_urls:
+            return []
+
+        stmt = (
+            select(clicklog)
+            .where(clicklog.short_url.in_(user_short_urls))
+            .order_by(clicklog.clicked_at.desc())
+            .limit(limit)
+        )
+        logs = db_session.exec(stmt).all()
+        
+        result = []
+        for log in logs:
+            result.append({
+                "id": log.id,
+                "short_url": log.short_url,
+                "clicked_at": log.clicked_at.isoformat() if log.clicked_at else None,
+                "ip_address": log.ip_address,
+                "country": log.country,
+                "browser": log.browser,
+                "device": log.device,
+                "referer": log.referer
+            })
+        return result
+
 @app.get("/api/user/links")
 async def get_user_links(request: Request):
     token = request.cookies.get("session_token")
@@ -476,6 +517,7 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         
     # Extract user_id if user is authenticated
     user_id = None
+    user_tier = "free"
     token = req.cookies.get("session_token")
     if token:
         try:
@@ -484,11 +526,64 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         except jwt.PyJWTError:
             pass
         
+    from datetime import datetime, UTC, timedelta
+
+    if user_id:
+        with Session(engine) as db_session:
+            db_user = db_session.get(User, user_id)
+            if db_user:
+                user_tier = db_user.tier
+
+    # Enforce limits for free tier
+    if user_tier == "free":
+        max_exp = datetime.now(UTC) + timedelta(days=15)
+        if exp_time:
+            requested_exp = datetime.now(UTC) + timedelta(hours=exp_time)
+            computed_exp_time = min(requested_exp, max_exp)
+        else:
+            computed_exp_time = max_exp
+
+        # Limit checks for registered users
+        if user_id:
+            with Session(engine) as db_session:
+                one_day_ago = datetime.now(UTC) - timedelta(days=1)
+                thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
+                
+                daily_count = db_session.exec(
+                    select(func.count(urldata.short_url))
+                    .where(urldata.user_id == user_id)
+                    .where(urldata.created_at >= one_day_ago)
+                ).one()
+                
+                if daily_count >= 10:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Daily limit reached. Free accounts are limited to 10 URLs per day."
+                    )
+                
+                monthly_count = db_session.exec(
+                    select(func.count(urldata.short_url))
+                    .where(urldata.user_id == user_id)
+                    .where(urldata.created_at >= thirty_days_ago)
+                ).one()
+                
+                if monthly_count >= 100:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Monthly limit reached. Free accounts are limited to 100 URLs per month."
+                    )
+    else:
+        # Premium tier
+        if exp_time:
+            computed_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
+        else:
+            computed_exp_time = None
+
     try:
         if custom_alias:
-            short_code = add_custom_url(long_url,custom_alias,user_id=user_id,exp_time=exp_time)
+            short_code = add_custom_url(long_url, custom_alias, user_id=user_id, exp_time=computed_exp_time)
         else:
-            short_code = add_url(long_url, user_id=user_id,exp_time=exp_time)
+            short_code = add_url(long_url, user_id=user_id, exp_time=computed_exp_time)
         if not short_code:
             raise HTTPException(status_code=500, detail="if this executes, the error is in short url.")
     except Exception:
