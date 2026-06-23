@@ -1,7 +1,8 @@
 features: library & other integration addons 
 features: QR 
-features: api keys & billing 
+features: api keys & billing
+email validation for quotes 
 seprate the free tier and other premium tier set rate limits 
 features: password protected URL's
 features: offload URL shortener like i sell them the product for 199$
-
+add professional email arch

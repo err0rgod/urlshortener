@@ -1,51 +1,58 @@
-# FlexURL Session Context - June 21, 2026
+# FlexURL Session Context - June 23, 2026
 
 ## What We Did Today
-1. **Authentication Session UI Persistence:**
-   - Modified [index.html](file:///D:/urlshortener/frontend/index.html) to dynamically request `/auth/me` on load and display the user's name alongside a **Log Out** button in the header if authenticated.
-   - Updated [login.html](file:///D:/urlshortener/frontend/login.html) to automatically check for active sessions and redirect logged-in users back to `/`.
-   - Unified the login/signup options onto `login.html` and deleted the redundant `signup.html` file.
-   - Replaced all header and pricing registration targets on the home screen to route to `/login`.
-2. **Rebranding:**
-   - Renamed all occurrences of "ShortenIt" to **FlexURL** across all HTML layout templates ([index.html](file:///D:/urlshortener/frontend/index.html), [login.html](file:///D:/urlshortener/frontend/login.html), [banned.html](file:///D:/urlshortener/frontend/banned.html), [privacy.html](file:///D:/urlshortener/frontend/privacy.html)).
-3. **Database URL Associations:**
-   - Updated [database.py](file:///D:/urlshortener/backend/database.py) and [short_url_gen.py](file:///D:/urlshortener/backend/short_url_gen.py) to accept `user_id`. When creating a link (or shortening a URL that already exists anonymously), it binds the user's ID to the record.
-   - Integrated cookie checking inside the `/shorten` route in [app.py](file:///D:/urlshortener/backend/app.py) to dynamically load the active user ID from the JWT payload.
-4. **Redis Fail-Fast Config:**
-   - Added connection and read/write timeouts (100ms) to the Redis client in [short_url_gen.py](file:///D:/urlshortener/backend/short_url_gen.py).
-   - Configured `try-except` blocks on all Redis operations (reads and writes) so that if Redis is offline, the backend degrades gracefully and redirects/stores links directly via PostgreSQL without throwing a `503 Service Unavailable` crash.
-5. **Link Expiration & Custom Alias Frontend Options:**
-   - Added interactive toggles on [index.html](file:///D:/urlshortener/frontend/index.html) for both "Use Custom Alias" and "Set Link Expiration" (select dropdown mapping from 1hr to 7 days).
-   - Fixed backend TypeErrors, NameErrors, and database column constraints to support `exp_time` validation up to 168 hours.
-6. **Enterprise Dedicated Sales Form:**
-   - Created the `/contact` form on [contact.html](file:///D:/urlshortener/frontend/contact.html) to collect client cloud infrastructure requirements.
-   - Routed the form submission to POST `/contact-sales` in [app.py](file:///D:/urlshortener/backend/app.py).
-   - Built [quotation.py](file:///D:/urlshortener/backend/quotation.py) to write incoming quotes to a local JSON file (configured via `QUOTATIONS_JSON_PATH` in `.env`) and send email alerts to `nirbhayerror@gmail.com` using the Resend API (`RESEND_API_KEY` in `.env`).
-   - Moved `/contact` route *above* the wildcard short URL redirect route to prevent matching collisions.
-7. **Began Link Analytics Phase:**
-   - Defined the database schema model for the `clicklog` table inside [models.py](file:///D:/urlshortener/backend/models.py).
+
+1. **Tier Restrictions & Expiration Limits**:
+   - Implemented a daily limit of 10 URL creations and a monthly limit of 100 URL creations for free-tier users.
+   - Configured automatic 15-day expiration times for all shortened links created by free or anonymous accounts.
+
+2. **Link Analytics Dashboard Charts**:
+   - Upgraded the visitor statistics visual panel inside [analytics.html](file:///D:/urlshortener/frontend/analytics.html).
+   - Replaced simple metric text lists with responsive grid columns and integrated interactive Doughnut (for browser/device data) and Horizontal Bar charts (for country metrics) using Chart.js.
+
+3. **OWASP Top 10 Security Audit & Core Logic Fixes**:
+   - **SSRF Fix:** Upgraded `is_private_url` in [validations.py](file:///D:/urlshortener/backend/validations.py) to perform full async DNS resolution checking all resolved IPs, blocking loopbacks, Link-Local, and private address spaces.
+   - **XSS Fix:** Added script-tag serialization escaping in [app.py](file:///D:/urlshortener/backend/app.py) to prevent script injections inside JSON script blocks.
+   - **Alias Security:** Implemented reserved alias validation to block routing conflicts and path traversals inside [validations.py](file:///D:/urlshortener/backend/validations.py) and [app.py](file:///D:/urlshortener/backend/app.py).
+
+4. **Terms of Service Integration**:
+   - Created the [terms.html](file:///D:/urlshortener/frontend/terms.html) document matching the styling and color variables of the Privacy Policy.
+   - Added the `/terms` route in [app.py](file:///D:/urlshortener/backend/app.py) to serve the page.
+   - Updated the footers in all HTML layouts ([index.html](file:///D:/urlshortener/frontend/index.html), [privacy.html](file:///D:/urlshortener/frontend/privacy.html), [banned.html](file:///D:/urlshortener/frontend/banned.html), [contact.html](file:///D:/urlshortener/frontend/contact.html), [login.html](file:///D:/urlshortener/frontend/login.html), [dashboard.html](file:///D:/urlshortener/frontend/dashboard.html), [analytics.html](file:///D:/urlshortener/frontend/analytics.html)) to link to `/terms` and `/privacy`.
+
+5. **Centralized Logging System**:
+   - Built a custom logger in [logger.py](file:///D:/urlshortener/backend/logger.py) that prints to standard output and writes structured logs to `backend/logs/app.log`.
+   - Refactored [auth.py](file:///D:/urlshortener/backend/auth.py), [quotation.py](file:///D:/urlshortener/backend/quotation.py), and [short_url_gen.py](file:///D:/urlshortener/backend/short_url_gen.py) to replace standard prints with structured warnings, errors, and critical logs.
+
+6. **Daily Analytics Email Report**:
+   - Created [report_scheduler.py](file:///D:/urlshortener/backend/report_scheduler.py) to analyze the logs and database statistics every 24 hours.
+   - The report queries daily new links created, total clicks, unique visitors (distinct visitor IPs), and log severity frequencies (INFO, WARNING, ERROR, CRITICAL) and dispatches a styled HTML report using the Resend API.
+   - Hooked the report scheduler into the FastAPI `lifespan` handler inside [app.py](file:///D:/urlshortener/backend/app.py).
+
+7. **Production VPS Deployment & Troubleshooting**:
+   - Solved PostgreSQL connection authentication failures by verifying database credentials and resetting user passwords inside PostgreSQL.
+   - Resolved Gunicorn worker startup crashes caused by database schema creation collisions. Removed `init_db()` execution from the web application startup context, configuring it to run manually once during deployment.
+   - Fixed a `NameError` crash by importing `asyncio` in [app.py](file:///D:/urlshortener/backend/app.py).
+   - Configured [.gitignore](file:///D:/urlshortener/.gitignore) to exclude local runtime logs and untracked `backend/logs/app.log` from git tracking.
 
 ---
 
 ## Current Status
-- Backend compiles and runs cleanly using `fastapi dev`.
-- Static HTML interfaces have all requested elements.
-- Local PostgreSQL connection is validated and operating.
-- Stale browser cookie foreign key errors resolved by validating database user presence on incoming JWT payloads.
+- The production server is deployed and fully operational at `https://link.zerodaily.in`.
+- Gunicorn is managed successfully via Systemd and reverse-proxied by Nginx.
+- PostgreSQL database tables and Redis caching are online and linked to the active environment configurations.
+- SSL encryption is configured and working.
 
 ---
 
 ## Next Steps for Tomorrow
-1. **Implement request header parsing for Analytics:**
-   - Write a helper (or install a lightweight library) to classify the browser (Chrome, Safari, Firefox, etc.) and device type (Desktop, Mobile, Tablet) from the request's `User-Agent` header.
-   - Set up IP Geolocation (via a public API or fallback) to determine the visitor's country.
-2. **Hook up `ClickLog` creation:**
-   - Inside [app.py](file:///D:/urlshortener/backend/app.py)'s wildcard redirect endpoint, extract visitor IP, User-Agent, and Referer.
-   - Dispatch a FastAPI `BackgroundTasks` handler to parse this info and write it into the `clicklog` database table.
-3. **Build the Aggregation API:**
-   - Create `GET /api/analytics/{short_url}` in [app.py](file:///D:/urlshortener/backend/app.py) to aggregate logs (total clicks, unique visitors, browser distribution, device type, referrers, and timeline).
-4. **Develop the User Dashboard Page (Option 2):**
-   - Create a dashboard UI to let authenticated users view their shortened URLs and statistics.
+1. **Premium Integration and Payments**:
+   - Integrate payment gateways (e.g., Stripe) to upgrade users from `free` to `premium` accounts.
+   - Set up premium tier pricing checks and upgrade workflows.
+2. **Branding & Custom Domain Features**:
+   - Allow premium users to add custom domains to their account for branded short links.
+3. **Advanced Analytics Filters**:
+   - Enhance the dashboard to support custom date range filters for analytics statistics.
 
 ---
 
