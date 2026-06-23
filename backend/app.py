@@ -10,16 +10,18 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
-from database import mark_url_banned, init_db, add_clicklog
+from database import mark_url_banned, init_db, add_clicklog, engine
 from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
-from models import clicklog
+from models import clicklog, urldata
 from analytics_parser import parse_referer, parse_user_agent , get_ip_country
 from typing import Optional
 import time
 import jwt
+from sqlmodel import Session, select
+from sqlalchemy import func
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
@@ -117,7 +119,7 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
     """
     process http metadata and push in DB"""
     browser,device = parse_user_agent(user_agent)
-    country = get_ip_country(ip_address)
+    country = await get_ip_country(ip_address)
     clean_referer = parse_referer(referer)
     log = clicklog(
         short_url=short_url,
@@ -125,11 +127,91 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
         country=country,
         browser=browser,
         device=device,
-        referer = referer
+        referer=clean_referer
     )
     add_clicklog(log)
 
 
+
+@app.get("/api/analytics/{short_url}")
+async def get_url_analytics(short_url: str, request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    with Session(engine) as db_session:
+        # Check if URL exists and user owns it
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url_entry = db_session.exec(statement).first()
+        if not url_entry:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+        if url_entry.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        # Clicks by date
+        by_date_query = db_session.exec(
+            select(func.date(clicklog.clicked_at), func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(func.date(clicklog.clicked_at))
+            .order_by(func.date(clicklog.clicked_at))
+        ).all()
+        by_date = [{"date": str(row[0]), "clicks": row[1]} for row in by_date_query]
+
+        # Clicks by browser
+        by_browser_query = db_session.exec(
+            select(clicklog.browser, func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(clicklog.browser)
+        ).all()
+        by_browser = [{"browser": row[0], "clicks": row[1]} for row in by_browser_query]
+
+        # Clicks by device
+        by_device_query = db_session.exec(
+            select(clicklog.device, func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(clicklog.device)
+        ).all()
+        by_device = [{"device": row[0], "clicks": row[1]} for row in by_device_query]
+
+        # Clicks by country
+        by_country_query = db_session.exec(
+            select(clicklog.country, func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(clicklog.country)
+        ).all()
+        by_country = [{"country": row[0], "clicks": row[1]} for row in by_country_query]
+
+        # Clicks by referrer
+        by_referer_query = db_session.exec(
+            select(clicklog.referer, func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(clicklog.referer)
+        ).all()
+        by_referer = [{"referer": row[0], "clicks": row[1]} for row in by_referer_query]
+
+        # Total clicks
+        total_clicks = db_session.exec(
+            select(func.count(clicklog.id)).where(clicklog.short_url == short_url)
+        ).one()
+
+        return {
+            "short_url": url_entry.short_url,
+            "long_url": url_entry.long_url,
+            "created_at": url_entry.created_at.isoformat() if url_entry.created_at else None,
+            "total_clicks": total_clicks,
+            "by_date": by_date,
+            "by_browser": by_browser,
+            "by_device": by_device,
+            "by_country": by_country,
+            "by_referer": by_referer
+        }
 
 @app.get("/{short_url}")
 async def get_short_give_long(short_url: str, request : Request, backgroud_tasks : BackgroundTasks):
