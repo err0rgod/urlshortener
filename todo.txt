@@ -1,6 +1,3 @@
-
-
-features: dashboard 
 features: library & other integration addons 
 features: QR 
 features: api keys & billing 
