@@ -3,6 +3,7 @@ import json
 import httpx
 from datetime import datetime, UTC
 from dotenv import load_dotenv
+from logger import logger
 
 load_dotenv()
 
@@ -22,7 +23,7 @@ def process_quotation(data: dict):
     if RESEND_API_KEY:
         send_email_via_resend(data)
     else:
-        print("Warning: RESEND_API_KEY not found in .env. Skipping email notification.")
+        logger.warning("RESEND_API_KEY not found in .env. Skipping email notification.")
 
 def save_to_json(data: dict):
     # Resolve path relative to project root if not absolute
@@ -48,7 +49,7 @@ def save_to_json(data: dict):
                     if not isinstance(records, list):
                         records = [records]
         except Exception as e:
-            print(f"Error parsing existing JSON records, starting fresh: {e}")
+            logger.error(f"Error parsing existing JSON records, starting fresh: {e}")
 
     # Append and commit
     records.append(entry)
@@ -56,7 +57,7 @@ def save_to_json(data: dict):
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(records, f, indent=4, ensure_ascii=False)
     except Exception as e:
-        print(f"Error writing to JSON storage file: {e}")
+        logger.error(f"Error writing to JSON storage file: {e}")
         raise e
 
 def send_email_via_resend(data: dict):
@@ -93,5 +94,5 @@ def send_email_via_resend(data: dict):
         resp = httpx.post(url, headers=headers, json=payload, timeout=10)
         resp.raise_for_status()
     except Exception as e:
-        print(f"Failed to post email via Resend API: {e}")
+        logger.error(f"Failed to post email via Resend API: {e}")
         raise e

@@ -17,6 +17,8 @@ router = APIRouter()
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 FIREBASE_ADMIN_SDK_JSON = os.getenv("FIREBASE_ADMIN_SDK_JSON")
 
+from logger import logger
+
 # Initialize Firebase Admin SDK if not already initialized
 if not firebase_admin._apps:
     try:
@@ -27,8 +29,9 @@ if not firebase_admin._apps:
             
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
+        logger.info("Firebase Admin SDK initialized successfully.")
     except Exception as e:
-        print(f"Error initializing Firebase Admin: {e}")
+        logger.error(f"Error initializing Firebase Admin: {e}")
 
 
 class SessionRequest(BaseModel):

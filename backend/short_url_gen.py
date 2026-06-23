@@ -4,6 +4,7 @@ from base62 import encode_base62
 from models import urldata
 from database import add_to_db, get_long_url, is_long_url_exists, mark_url_banned, is_alias_exists
 import redis
+from logger import logger
 # from validations import check_safe_browsing
 
 redis_client = redis.Redis(
@@ -59,8 +60,8 @@ def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[i
             long_url,
             ex=3600
             )
-    except:
-        print("Warning: Redis is Offline falling back to DataBase.")
+    except Exception as re:
+        logger.warning(f"Redis is Offline falling back to Database: {re}")
     add_to_db(url)
     return short_url
 
@@ -92,8 +93,8 @@ def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_ti
                 long_url,
                 ex=3600
                 )
-        except:
-            print("Warning: Redis is Offline falling back to DataBase.")
+        except Exception as re:
+            logger.warning(f"Redis is Offline falling back to Database: {re}")
         add_to_db(url)
         return custom_alias
 
@@ -105,23 +106,23 @@ def serve_url(short_url : str):
     cached = None
     try:
         cached = redis_client.get(short_url)
-    except:
-        print("Warning: Reddis Offline, Fallback to DataBase.")
+    except Exception as re:
+        logger.warning(f"Redis Offline, falling back to database: {re}")
     if cached:
         return cached
     else:   
         long_url = get_long_url(short_url)
         if long_url:
-            if cached:
+            try:
                 redis_client.set(
                     short_url,
                     long_url,
-                    ex = 3600
+                    ex=3600
                 )
-            else:
-                print("Warning: Redis Offline, No cache storage available.")
+            except Exception as re:
+                logger.warning(f"Redis Offline, no cache storage available: {re}")
             return long_url
             
         else:
-            print("URL does not exist")
+            logger.info(f"URL resolution requested but code does not exist: {short_url}")
 

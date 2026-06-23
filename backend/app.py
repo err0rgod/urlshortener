@@ -23,14 +23,30 @@ import time
 import jwt
 from sqlmodel import Session, select
 from sqlalchemy import func
+from contextlib import asynccontextmanager
+from logger import logger
+from report_scheduler import daily_report_scheduler_loop
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
-init_db()
-
 FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Application starting up...")
+    logger.info("Launching background daily report scheduler...")
+    scheduler_task = asyncio.create_task(daily_report_scheduler_loop())
+    yield
+    logger.info("Application shutting down...")
+    logger.info("Canceling background report scheduler task...")
+    scheduler_task.cancel()
+    try:
+        await scheduler_task
+    except asyncio.CancelledError:
+        pass
+    logger.info("Application shutdown completed.")
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(auth_router)
 limiter = RateLimiterStore(max_tokens=60, refill_rate=60, interval=60)
 
@@ -394,7 +410,7 @@ async def delete_user_account(request: Request):
                 from firebase_admin import auth as firebase_auth
                 firebase_auth.delete_user(oauth_id)
             except Exception as e:
-                print(f"Warning: Failed to delete user from Firebase Auth: {e}")
+                logger.warning(f"Failed to delete user from Firebase Auth: {e}")
 
     response = JSONResponse(content={"status": "success", "message": "Account deleted successfully"})
     response.delete_cookie(key="session_token")
