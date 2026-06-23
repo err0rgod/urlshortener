@@ -29,4 +29,4 @@ class clicklog(SQLModel, table=True):
     country : str = Field(nullable=False, default="NA")
     browser : str = Field(nullable=False, default="NA")
     device : str = Field(nullable=False, default="NA")
-    referres : str = Field(nullable=False, default="NA")
+    referer : str = Field(nullable=False, default="NA")

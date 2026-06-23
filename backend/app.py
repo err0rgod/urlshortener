@@ -10,11 +10,13 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
-from database import mark_url_banned, init_db
+from database import mark_url_banned, init_db, add_clicklog
 from validations import is_valid_url, check_safe_browsing
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
+from models import clicklog
+from analytics_parser import parse_referer, parse_user_agent , get_ip_country
 from typing import Optional
 import time
 import jwt
@@ -111,8 +113,26 @@ async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail="Failed to process quotation request")
 
 
+async def record_analytics(short_url : str, ip_address : str, user_agent : str, referer : str):
+    """
+    process http metadata and push in DB"""
+    browser,device = parse_user_agent(user_agent)
+    country = get_ip_country(ip_address)
+    clean_referer = parse_referer(referer)
+    log = clicklog(
+        short_url=short_url,
+        ip_address=ip_address,
+        country=country,
+        browser=browser,
+        device=device,
+        referer = referer
+    )
+    add_clicklog(log)
+
+
+
 @app.get("/{short_url}")
-async def get_short_give_long(short_url: str):
+async def get_short_give_long(short_url: str, request : Request, backgroud_tasks : BackgroundTasks):
     try:
         long_url = serve_url(short_url)
     except Exception:
@@ -123,6 +143,12 @@ async def get_short_give_long(short_url: str):
             return HTMLResponse(content=f.read(), status_code=403)
             
     if long_url:
+        client_ip = request.client.host
+        user_agent = request.headers.get("user-agent","")
+        referer = request.headers.get("referer","Direct")
+        backgroud_tasks.add_task(
+            record_analytics,short_url,client_ip,user_agent,referer
+        )
         return RedirectResponse(long_url, status_code=302)
     raise HTTPException(status_code=404, detail="Short URL not found")
 
@@ -169,4 +195,6 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
     full_short_url = f"{base_url}/{short_code}"
     
     return {"short_url": full_short_url}
+
+
 

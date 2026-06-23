@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from sqlmodel import create_engine,SQLModel, Session, select
 from typing import Optional
-from models import urldata, User
+from models import urldata, User, clicklog
 from datetime import datetime, UTC
 
 
@@ -90,3 +90,12 @@ def create_user(email : str, full_name : str, oauth_provider : str, oauth_id : s
         session.commit()
         session.refresh(user)
         return user
+    
+
+
+def add_clicklog(log : clicklog):
+    """log Indivisual Event"""
+    # when in cloud needs to be host on sprate data base
+    with Session(engine) as session:
+        session.add(log)
+        session.commit()
