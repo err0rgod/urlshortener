@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // Check theme preference before rendering to prevent flashing
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FlexURL - Analytics Dashboard</title>
@@ -14,11 +22,35 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
                     },
+                    textColor: {
+                        slate: {
+                            400: 'var(--text-slate-400)',
+                            500: 'var(--text-slate-500)',
+                            600: 'var(--text-slate-600)',
+                            700: 'var(--text-slate-700)',
+                            800: 'var(--text-slate-800)',
+                            900: 'var(--text-slate-900)',
+                        }
+                    },
+                    backgroundColor: {
+                        white: 'var(--bg-white)',
+                        slate: {
+                            50: 'var(--bg-slate-50)',
+                            100: 'var(--bg-slate-100)',
+                        }
+                    },
+                    borderColor: {
+                        slate: {
+                            100: 'var(--border-slate-100)',
+                            200: 'var(--border-slate-200)',
+                        }
+                    }
                 }
             }
         }
@@ -29,24 +61,61 @@
             backdrop-filter: blur(12px);
             border: 1px solid rgba(226, 232, 240, 0.8);
         }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+        }
+        :root {
+            --text-slate-400: #475569;
+            --text-slate-500: #334155;
+            --text-slate-600: #475569;
+            --text-slate-700: #334155;
+            --text-slate-800: #1e293b;
+            --text-slate-900: #0f172a;
+            --bg-white: #ffffff;
+            --bg-slate-50: #f8fafc;
+            --bg-slate-100: #f1f5f9;
+            --border-slate-100: #f1f5f9;
+            --border-slate-200: #e2e8f0;
+        }
+        .dark {
+            --text-slate-400: #94a3b8;
+            --text-slate-500: #cbd5e1;
+            --text-slate-600: #cbd5e1;
+            --text-slate-700: #e2e8f0;
+            --text-slate-800: #f1f5f9;
+            --text-slate-900: #f8fafc;
+            --bg-white: #0f172a;
+            --bg-slate-50: #020617;
+            --bg-slate-100: #1e293b;
+            --border-slate-100: #334155;
+            --border-slate-200: #1e293b;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased">
     
     <!-- Top Navigation Header -->
-    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-8">
-                <a href="/" class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <a href="/" class="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                     <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                     <span>FlexURL</span>
                 </a>
             </div>
-            <div id="auth-nav-container" class="flex items-center space-x-4">
-                <a href="/" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Create Links</a>
-                <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
-                    Log Out
-                </a>
+            <div class="flex items-center space-x-4">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" type="button" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+                <div id="auth-nav-container" class="flex items-center space-x-4">
+                    <a href="/" class="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Create Links</a>
+                    <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
+                        Log Out
+                    </a>
+                </div>
             </div>
         </div>
     </header>
@@ -303,6 +372,8 @@
                     data = await response.json();
                 }
                 
+                window.analyticsData = data;
+                
                 // Populate Headers & Info
                 document.getElementById('display-short-url').textContent = window.location.origin + '/' + data.short_url;
                 const longUrlEl = document.getElementById('display-long-url');
@@ -329,14 +400,8 @@
                 renderProgressList('browser-list', data.by_browser, 'browser', 'clicks', data.total_clicks, 'bg-indigo-500');
                 renderProgressList('device-list', data.by_device, 'device', 'clicks', data.total_clicks, 'bg-amber-500');
 
-                // Render Time-Series Chart
-                renderChart(data.by_date);
-
                 // Render visual charts (Choice 3)
-                createBarChart('referrerChart', data.by_referer, 'referer', 'clicks', '#10b981');
-                createDoughnutChart('countryChart', data.by_country, 'country', 'clicks', ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3', '#ffe4e6']);
-                createDoughnutChart('browserChart', data.by_browser, 'browser', 'clicks', ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe']);
-                createDoughnutChart('deviceChart', data.by_device, 'device', 'clicks', ['#d97706', '#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7']);
+                redrawCharts(data);
 
                 // Hide loader and show content
                 document.getElementById('loading-state').classList.add('hidden');
@@ -357,6 +422,16 @@
                 document.getElementById('loading-state').classList.add('hidden');
                 document.getElementById('error-state').classList.remove('hidden');
             }
+        }
+
+        // Helper to redraw all charts dynamically
+        function redrawCharts(data) {
+            if (!data) return;
+            renderChart(data.by_date);
+            createBarChart('referrerChart', data.by_referer, 'referer', 'clicks', '#10b981');
+            createDoughnutChart('countryChart', data.by_country, 'country', 'clicks', ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3', '#ffe4e6']);
+            createDoughnutChart('browserChart', data.by_browser, 'browser', 'clicks', ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe']);
+            createDoughnutChart('deviceChart', data.by_device, 'device', 'clicks', ['#d97706', '#f59e0b', '#fbbf24', '#fcd34d', '#fef3c7']);
         }
 
         // Helper to construct interactive Doughnut charts (Choice 3)
@@ -380,6 +455,7 @@
 
             const labels = items.map(item => item[labelKey] || 'Unknown');
             const dataPoints = items.map(item => item[countKey] || 0);
+            const isDark = document.documentElement.classList.contains('dark');
 
             new Chart(ctx, {
                 type: 'doughnut',
@@ -389,7 +465,7 @@
                         data: dataPoints,
                         backgroundColor: colors,
                         borderWidth: 2,
-                        borderColor: '#ffffff',
+                        borderColor: isDark ? '#0f172a' : '#ffffff',
                         hoverOffset: 4
                     }]
                 },
@@ -434,6 +510,8 @@
 
             const labels = items.map(item => item[labelKey] || 'Direct/Email');
             const dataPoints = items.map(item => item[countKey] || 0);
+            const isDark = document.documentElement.classList.contains('dark');
+            const tickColor = isDark ? '#cbd5e1' : '#475569';
 
             new Chart(ctx, {
                 type: 'bar',
@@ -471,7 +549,7 @@
                             },
                             ticks: {
                                 font: { family: 'Inter', size: 9 },
-                                color: '#64748b',
+                                color: tickColor,
                                 stepSize: 1
                             }
                         },
@@ -481,7 +559,7 @@
                             },
                             ticks: {
                                 font: { family: 'Inter', size: 9 },
-                                color: '#64748b'
+                                color: tickColor
                             }
                         }
                     }
@@ -493,6 +571,12 @@
             const canvas = document.getElementById('clicksChart');
             const ctx = canvas.getContext('2d');
             
+            // Clean up old instances if they exist
+            const existingChart = Chart.getChart('clicksChart');
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
             // Fallback for empty data
             if (!byDateData || byDateData.length === 0) {
                 ctx.font = '12px Inter';
@@ -511,6 +595,10 @@
             gradient.addColorStop(0, 'rgba(79, 70, 229, 0.35)');
             gradient.addColorStop(1, 'rgba(79, 70, 229, 0.01)');
 
+            const isDark = document.documentElement.classList.contains('dark');
+            const tickColor = isDark ? '#cbd5e1' : '#475569';
+            const gridColor = isDark ? '#334155' : '#e2e8f0';
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -521,7 +609,7 @@
                         borderColor: '#4f46e5',
                         borderWidth: 3,
                         pointBackgroundColor: '#4f46e5',
-                        pointBorderColor: '#ffffff',
+                        pointBorderColor: isDark ? '#0f172a' : '#ffffff',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6,
@@ -555,19 +643,19 @@
                             },
                             ticks: {
                                 font: { family: 'Inter', size: 10 },
-                                color: '#64748b'
+                                color: tickColor
                             }
                         },
                         y: {
                             beginAtZero: true,
                             grid: {
                                 borderDash: [5, 5],
-                                color: '#e2e8f0'
+                                color: gridColor
                             },
                             ticks: {
                                 stepSize: 1,
                                 font: { family: 'Inter', size: 10 },
-                                color: '#64748b'
+                                color: tickColor
                             }
                         }
                     }
@@ -576,6 +664,48 @@
         }
 
         window.addEventListener('DOMContentLoaded', fetchAnalytics);
+
+        // Theme Toggle Functionality
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (document.documentElement.classList.contains('dark')) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            
+            if (localStorage.getItem('theme')) {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            }
+            window.dispatchEvent(new Event('theme-changed'));
+        });
+
+        // Listen for theme change to redraw charts
+        window.addEventListener('theme-changed', () => {
+            if (window.analyticsData) {
+                redrawCharts(window.analyticsData);
+            }
+        });
     </script>
 </body>
 </html>

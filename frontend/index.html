@@ -1,9 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // Check theme preference before rendering to prevent flashing
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlexURL - Link Management & Security Platform for Businesses</title>
+    <title>FlexURL - Enterprise Link Infrastructure & Marketing Analytics</title>
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,180 +20,389 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
                     },
+                    textColor: {
+                        slate: {
+                            400: 'var(--text-slate-400)',
+                            500: 'var(--text-slate-500)',
+                            600: 'var(--text-slate-600)',
+                            700: 'var(--text-slate-700)',
+                            800: 'var(--text-slate-800)',
+                            900: 'var(--text-slate-900)',
+                        }
+                    },
+                    backgroundColor: {
+                        white: 'var(--bg-white)',
+                        slate: {
+                            50: 'var(--bg-slate-50)',
+                            100: 'var(--bg-slate-100)',
+                        }
+                    },
+                    borderColor: {
+                        slate: {
+                            100: 'var(--border-slate-100)',
+                            200: 'var(--border-slate-200)',
+                        }
+                    }
                 }
             }
         }
     </script>
+    <style>
+        :root {
+            --text-slate-400: #475569;
+            --text-slate-500: #334155;
+            --text-slate-600: #475569;
+            --text-slate-700: #334155;
+            --text-slate-800: #1e293b;
+            --text-slate-900: #0f172a;
+            --bg-white: #ffffff;
+            --bg-slate-50: #f8fafc;
+            --bg-slate-100: #f1f5f9;
+            --border-slate-100: #f1f5f9;
+            --border-slate-200: #e2e8f0;
+        }
+        .dark {
+            --text-slate-400: #94a3b8;
+            --text-slate-500: #cbd5e1;
+            --text-slate-600: #cbd5e1;
+            --text-slate-700: #e2e8f0;
+            --text-slate-800: #f1f5f9;
+            --text-slate-900: #f8fafc;
+            --bg-white: #0f172a;
+            --bg-slate-50: #020617;
+            --bg-slate-100: #1e293b;
+            --border-slate-100: #334155;
+            --border-slate-200: #1e293b;
+        }
+        .grid-bg {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
+        }
+        .dark .grid-bg {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+        }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased grid-bg">
     
     <!-- Top Navigation Header -->
-    <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-8">
-                <a href="/" class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <a href="/" class="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                     <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
                     <span>FlexURL</span>
                 </a>
                 <nav class="hidden md:flex items-center space-x-6">
-                    <a href="#features" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Features</a>
-                    <a href="#security-hub" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Security</a>
-                    <a href="#pricing" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Pricing</a>
-                    <a href="#api" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Developer API</a>
+                    <a href="#features" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Features</a>
+                    <a href="#security-hub" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Security</a>
+                    <a href="#pricing" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Pricing</a>
+                    <a href="#api" class="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Developer API</a>
                 </nav>
             </div>
-            <div id="auth-nav-container" class="flex items-center space-x-4">
-                <a href="/login" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors">Log in</a>
-                <a href="/login?mode=signup" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    Get Started Free
-                </a>
+            <div class="flex items-center space-x-4">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" type="button" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+                <div id="auth-nav-container" class="flex items-center space-x-4">
+                    <a href="/login" class="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Log in</a>
+                    <a href="/login?mode=signup" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        Get Started Free
+                    </a>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="bg-white border-b border-slate-200 pt-16 pb-20">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 mb-6">
-                Now serving enterprise brand domains
+    <!-- Hero Section: Trial Widget first, then Split Details below -->
+    <section class="pt-20 pb-24 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                Secure Redirection Infrastructure
             </span>
-            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 mb-6 leading-tight max-w-3xl mx-auto">
-                Link management infrastructure built for modern teams.
+            <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 max-w-4xl mx-auto leading-snug">
+                Branded marketing links. Clean redirection analytics.
             </h1>
-            <p class="text-lg text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-                Shorten, secure, and track your links at scale. Enhance your brand identity with custom domains, protect customers with automated Safe Browsing checks, and analyze performance in real time.
+            <p class="text-base sm:text-lg text-slate-500 max-w-3xl mx-auto leading-relaxed">
+                Build trust with professional, parameter-free links. FlexURL logs analytics natively during redirection, tracking performance without ugly URL parameters or compromising user security.
             </p>
-            
-            <!-- Quick Trial Shortener Widget -->
-            <div class="max-w-xl mx-auto bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-sm text-left">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Try it instantly</h3>
+
+            <!-- Centered Generate Link Widget -->
+            <div class="max-w-2xl mx-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-md text-left">
+                <h3 class="text-sm font-bold text-slate-900 mb-4">Generate Secure Link</h3>
                 <form id="shorten-form" class="space-y-4">
                     <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" id="long_url" placeholder="Paste your long link here (e.g. https://google.com)" required
-                            class="flex-grow px-4 py-3 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
+                        <input type="text" id="long_url" placeholder="Paste your target URL (e.g. https://google.com)" required
+                            class="flex-grow px-4 py-3 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white dark:bg-slate-800">
                         <button type="submit" 
-                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 whitespace-nowrap">
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-nowrap">
                             Shorten Link
                         </button>
                     </div>
                     
-                    <div class="flex flex-col gap-2">
-                        <label class="inline-flex items-center text-xs font-semibold text-slate-500 cursor-pointer select-none">
-                            <input type="checkbox" id="enable-alias" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4">
-                            <span>Use Custom Alias</span>
-                        </label>
-                        
-                        <div id="alias-container" class="hidden transition-all duration-200 ease-in-out">
-                            <input type="text" id="custom_alias" placeholder="Enter custom alias (e.g. my-promo-link)"
-                                class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors bg-white">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-2">
+                            <label class="inline-flex items-center text-xs font-semibold text-slate-500 cursor-pointer select-none">
+                                <input type="checkbox" id="enable-alias" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4">
+                                <span>Custom Alias</span>
+                            </label>
+                            <div id="alias-container" class="hidden">
+                                <input type="text" id="custom_alias" placeholder="e.g. summer-sale"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="flex flex-col gap-2">
-                        <label class="inline-flex items-center text-xs font-semibold text-slate-500 cursor-pointer select-none">
-                            <input type="checkbox" id="enable-expiry" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4">
-                            <span>Set Link Expiration</span>
-                        </label>
-                        
-                        <div id="expiry-container" class="hidden transition-all duration-200 ease-in-out">
-                            <select id="expiry_hours" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-white">
-                                <option value="1">1 Hour</option>
-                                <option value="12">12 Hours</option>
-                                <option value="24">1 Day</option>
-                                <option value="72">3 Days</option>
-                                <option value="168">7 Days (Maximum)</option>
-                            </select>
+                        <div class="flex flex-col gap-2">
+                            <label class="inline-flex items-center text-xs font-semibold text-slate-500 cursor-pointer select-none">
+                                <input type="checkbox" id="enable-expiry" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 h-4 w-4">
+                                <span>Link Expiration</span>
+                            </label>
+                            <div id="expiry-container" class="hidden">
+                                <select id="expiry_hours" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                                    <option value="1">1 Hour</option>
+                                    <option value="12">12 Hours</option>
+                                    <option value="24">1 Day</option>
+                                    <option value="72">3 Days</option>
+                                    <option value="168">7 Days</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </form>
+
+                <div id="error" class="hidden mt-3 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs rounded-lg text-left"></div>
                 
-                <div id="error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg"></div>
-                
-                <div id="result" class="hidden mt-4">
-                    <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Your shortened URL</p>
-                    <div class="flex gap-2 mb-2">
+                <div id="result" class="hidden mt-4 text-left">
+                    <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Shortened URL</p>
+                    <div class="flex gap-2">
                         <input type="text" id="short_url" readonly
-                            class="flex-grow px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none cursor-default">
+                            class="flex-grow px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-800 dark:text-slate-200 focus:outline-none cursor-default">
                         <button id="copy-btn" 
                             class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             Copy
                         </button>
                     </div>
-                    <div class="flex justify-end">
-                        <a id="analytics-link" href="#" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline flex items-center gap-1">
+                    <div class="flex justify-end mt-2">
+                        <a id="analytics-link" href="#" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:underline flex items-center gap-1">
                             <span>View Analytics</span>
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                         </a>
                     </div>
                 </div>
             </div>
+
+            <!-- Side-by-side: UTM Branding Cost vs Advanced Premium Analytics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto text-left pt-12">
+                <!-- Branding Problem Card (Left) -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-sm">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 mb-3">Why Bloated Tracking Hurts Your Brand</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                            Appending complex UTM strings and telemetry variables to your URLs compromises brand identity and exposes internal taxonomy to competitors.
+                        </p>
+                        
+                        <div class="space-y-3">
+                            <div class="p-3 bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-lg">
+                                <span class="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block mb-1">Bloated URL (Hurts User Trust & CTR)</span>
+                                <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500 break-all line-through">
+                                    https://mybrand.com/promo?utm_source=twitter&utm_medium=social&utm_campaign=summer-sale&utm_content=banner-ad
+                                </span>
+                            </div>
+                            <div class="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-lg">
+                                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-1">FlexURL Clean Redirect</span>
+                                <span class="text-[12px] font-mono text-slate-900 dark:text-slate-100 break-all font-semibold">
+                                    https://brand.link/summer-sale
+                                </span>
+                            </div>
+                        </div>
+
+                        <ul class="mt-4 space-y-2.5">
+                            <li class="flex items-start text-xs text-slate-500">
+                                <span class="text-red-500 mr-2">✗</span>
+                                <span><strong>Reduced Click-Through Rates:</strong> Telemetry-heavy URLs look spammy and suspicious, causing security-conscious users to drop off, reducing campaign click-through rates by up to 34%.</span>
+                            </li>
+                            <li class="flex items-start text-xs text-slate-500">
+                                <span class="text-red-500 mr-2">✗</span>
+                                <span><strong>Loss of Domain Authority:</strong> Placing tracking domains instead of your branded domain dilutes brand equity. Your users remember the tracking partner, not your brand name.</span>
+                            </li>
+                            <li class="flex items-start text-xs text-slate-500">
+                                <span class="text-red-500 mr-2">✗</span>
+                                <span><strong>Exposing Marketing Strategy:</strong> Competitors can easily scrape your public URLs to capture your target keywords, affiliate identities, and specific ad groups in plain text.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Premium Advanced Analytics Card (Right) -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                    <span class="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-bold tracking-widest uppercase py-1 px-3 rounded-bl-xl">
+                        Premium Preview
+                    </span>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 mb-3">Enterprise-Grade Performance Intelligence</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                            Unlock deep business insights. Track customer interactions dynamically without exposing any visible parameters to the end-user.
+                        </p>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L16 4m0 13V4m0 0L9 7" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900">Geographic & Device Intelligence Maps</h4>
+                                    <p class="text-[11px] text-slate-500">Trace your audience down to region, city, operating system, and browser engine with high accuracy, implicitly loaded on redirect.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900">Real-Time Marketing Attribution Engine</h4>
+                                    <p class="text-[11px] text-slate-500">Instantly map clean redirects to target conversion goals, measuring organic campaign ROI without third-party cookies.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900">Automated Bot & Click Fraud Filter</h4>
+                                    <p class="text-[11px] text-slate-500">Exclude search crawlers, automated scrapers, and malicious bot activities automatically to guarantee clean, verified campaign stats.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900">A/B Testing & Dynamic Traffic Splits</h4>
+                                    <p class="text-[11px] text-slate-500">Distribute inbound redirection traffic dynamically between multiple variant URLs with weighted split controls to test landing pages easily.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900">Cookie-less User Journey Sequences</h4>
+                                    <p class="text-[11px] text-slate-500">Track repeating user touchpoints across multiple links securely using cryptographic browser hashes rather than storing invasive cookies.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-900">SIEM & Real-time Webhook Event Stream</h4>
+                                    <p class="text-[11px] text-slate-500">Pipe redirection telemetry payloads directly into your existing enterprise stack (Datadog, Splunk, Segment, Snowflake) as they happen.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- Key SaaS Features Grid -->
-    <section id="features" class="py-20 bg-slate-50 border-b border-slate-200">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl font-extrabold tracking-tight text-slate-900">
-                    Everything you need to manage links at scale
+    <!-- Bento Grid Features Section -->
+    <section id="features" class="py-24 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 space-y-4">
+                <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Pure branded redirects. No cookies. No visible tracking parameters.</span>
+                <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+                    Unified Redirection Infrastructure
                 </h2>
-                <p class="mt-4 text-base text-slate-500 max-w-xl mx-auto">
-                    Hosted cloud plans or dedicated white-label setups. We empower teams with performance metrics and threat mitigation tools.
+                <p class="text-sm text-slate-500 max-w-xl mx-auto">
+                    Hosted SaaS options or single-tenant cloud configurations. Collect insights at sub-millisecond execution speeds.
                 </p>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
-                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                    <div class="mb-4 text-indigo-600">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 max-w-6xl mx-auto items-stretch">
+                <!-- Bento Card 1: Implicit analytics (Col span 8) -->
+                <div class="md:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="mb-4 text-indigo-600">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2zm0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Implicit Redirection Analytics</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed max-w-xl">
+                            Collect analytics implicitly. Parse clicks, geo-location, referrers, and device environments seamlessly upon redirection, giving marketing departments deep analytics without lowering user click-through rates.
+                        </p>
                     </div>
-                    <h3 class="text-base font-bold text-slate-900 mb-2">Custom Branded Domains</h3>
-                    <p class="text-xs text-slate-500 leading-relaxed">
-                        Replace generic redirect domains with your own corporate domain names. Increase brand recognition and link click-through rates by up to 34%.
-                    </p>
                 </div>
-                <!-- Feature 2 -->
-                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                    <div class="mb-4 text-indigo-600">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+
+                <!-- Bento Card 2: Custom Domains (Col span 4) -->
+                <div class="md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="mb-4 text-indigo-600">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Branded Domains</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            Improve user trust by masking raw links with custom brand-owned subdomains.
+                        </p>
                     </div>
-                    <h3 class="text-base font-bold text-slate-900 mb-2">Real-Time Data Analytics</h3>
-                    <p class="text-xs text-slate-500 leading-relaxed">
-                        Get granular reports on user clicks, locations, browsers, and referrers. Feed structured click statistics directly into your business database.
-                    </p>
                 </div>
-                <!-- Feature 3 -->
-                <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                    <div class="mb-4 text-indigo-600">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+
+                <!-- Bento Card 3: Enterprise Security (Col span 4) -->
+                <div class="md:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="mb-4 text-indigo-600">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Reputation Shield</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            Safe Browsing checks and private subnet blocking isolate security threats and safe-keep your redirect reputation.
+                        </p>
                     </div>
-                    <h3 class="text-base font-bold text-slate-900 mb-2">API & Webhooks</h3>
-                    <p class="text-xs text-slate-500 leading-relaxed">
-                        Generate links programmatically within your workflows. Integrate with modern developer tools using our high-performance HTTP JSON endpoint.
-                    </p>
+                </div>
+
+                <!-- Bento Card 4: SDK & API (Col span 8) -->
+                <div class="md:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="mb-4 text-indigo-600">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Developer Integration & APIs</h3>
+                        <p class="text-xs text-slate-500 leading-relaxed max-w-xl">
+                            Integrate redirect infrastructure into your native applications. Built-in SDK access, programmatic API bindings, and JSON endpoints allow creation and secure deployment of collision-free Sonyflake link patterns at scale.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Security Focus Interactive Section (Previously Tab Section) -->
-    <section id="security-hub" class="py-20 bg-white border-b border-slate-200">
+    <section id="security-hub" class="py-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 
                 <div class="lg:col-span-5 space-y-6">
                     <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Enterprise Security Hub</span>
                     <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                        Securing redirection infrastructure.
+                        Securing your brand reputation.
                     </h2>
                     <p class="text-sm text-slate-500 leading-relaxed">
-                        Most URL shorteners are exploited for phishing and Server-Side scans. FlexURL implements rigorous validation steps to keep your organization and customers safe.
+                        Redirection links are frequent targets for phishing exploits and spam lists. FlexURL protects your marketing brand by actively validating destination URLs, ensuring that only clean, safe links are analyzed.
                     </p>
                     
                     <!-- Tabs Headers -->
@@ -200,7 +417,7 @@
                 </div>
 
                 <!-- Tabs Content area (7 columns) -->
-                <div class="lg:col-span-7 bg-slate-50 border border-slate-200 rounded-xl p-6 sm:p-8">
+                <div class="lg:col-span-7 bg-indigo-50/50 dark:bg-slate-950 border border-indigo-100 dark:border-slate-800 rounded-xl p-6 sm:p-8">
                     
                     <!-- Security Tab content -->
                     <div class="tab-content" id="tab-security">
@@ -239,11 +456,11 @@
                     <!-- Developer Tab content -->
                     <div class="tab-content hidden" id="tab-developers">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">cURL API Reference</p>
-                        <code class="block bg-white border border-slate-200 rounded-lg p-3 text-[11px] text-slate-800 font-mono break-all leading-relaxed mb-4">
+                        <code class="block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-[11px] text-slate-800 font-mono break-all leading-relaxed mb-4">
                             curl -X POST https://link.zerodaily.in/shorten -H "Content-Type: application/json" -d '{"long_url": "https://example.com"}'
                         </code>
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Expected JSON Output</p>
-                        <pre class="bg-white border border-slate-200 rounded-lg p-3 text-[11px] text-slate-800 font-mono overflow-x-auto">
+                        <pre class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 text-[11px] text-slate-800 font-mono overflow-x-auto">
 {
   "short_url": "https://link.zerodaily.in/sK39x"
 }</pre>
@@ -255,7 +472,7 @@
     </section>
 
     <!-- Pricing Section (SaaS Highlight) -->
-    <section id="pricing" class="py-20 bg-slate-50 border-b border-slate-200">
+    <section id="pricing" class="py-20 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-extrabold tracking-tight text-slate-900">
@@ -268,7 +485,7 @@
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-5xl mx-auto">
                 <!-- Tier 1: Free -->
-                <div class="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col justify-between shadow-sm">
                     <div>
                         <h3 class="text-lg font-bold text-slate-900 mb-2">Developer Free</h3>
                         <p class="text-xs text-slate-400 mb-6">Perfect for building and personal utility.</p>
@@ -286,7 +503,7 @@
                 </div>
                 
                 <!-- Tier 2: Business Pro (Highlight) -->
-                <div class="bg-white border-2 border-indigo-600 rounded-xl p-8 flex flex-col justify-between shadow-sm relative">
+                <div class="bg-white dark:bg-slate-900 border-2 border-indigo-600 rounded-xl p-8 flex flex-col justify-between shadow-sm relative">
                     <span class="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[10px] font-bold tracking-widest uppercase py-1 px-3.5 rounded-full">
                         Most Popular
                     </span>
@@ -307,7 +524,7 @@
                 </div>
                 
                 <!-- Tier 3: Enterprise Tenant -->
-                <div class="bg-white border border-slate-200 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col justify-between shadow-sm">
                     <div>
                         <h3 class="text-lg font-bold text-slate-900 mb-2">Enterprise Dedicated</h3>
                         <p class="text-xs text-slate-400 mb-6">Dedicated deployment on customer tenants.</p>
@@ -328,7 +545,7 @@
     </section>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-12 px-4 mt-auto">
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12 px-4 mt-auto">
         <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12 text-left">
             <div class="space-y-4">
                 <span class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
@@ -369,7 +586,7 @@
                 &copy; 2026 err0god. All rights reserved. Built by <a href="https://github.com/err0rgod" target="_blank" class="text-indigo-600 hover:underline">Nirbhay Katiyar</a>.
             </div>
             <div class="flex space-x-6">
-                <a href="https://github.com/err0rgod" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">GitHub</a>
+                <a href="https://github.com/err0god" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">GitHub</a>
                 <a href="https://linkedin.com/in/nirbhay-katiyar" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">LinkedIn</a>
                 <a href="https://x.com/err0god" target="_blank" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">X</a>
             </div>
@@ -387,9 +604,9 @@
                         const container = document.getElementById('auth-nav-container');
                         if (container) {
                             container.innerHTML = `
-                                <a href="/dashboard" class="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition-colors mr-4">Dashboard</a>
-                                <span class="text-sm text-slate-600 font-medium mr-4">Hello, ${data.user.full_name}</span>
-                                <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
+                                <a href="/dashboard" class="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mr-4">Dashboard</a>
+                                <span class="text-sm text-slate-600 dark:text-slate-300 font-medium mr-4">Hello, ${data.user.full_name}</span>
+                                <a href="/auth/logout" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg transition-all focus:outline-none">
                                     Log Out
                                 </a>
                             `;
@@ -526,6 +743,41 @@
                 const tabId = button.getAttribute('data-tab');
                 document.getElementById(`tab-${tabId}`).classList.remove('hidden');
             });
+        });
+
+        // Theme Toggle Functionality
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (document.documentElement.classList.contains('dark')) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            
+            if (localStorage.getItem('theme')) {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            }
+            window.dispatchEvent(new Event('theme-changed'));
         });
     </script>
 </body>

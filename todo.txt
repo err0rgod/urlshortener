@@ -1,4 +1,5 @@
 dark mode and fix contrast
+fix ratelimit issue
 add .txt and other sitemap fies
 seo and other meta tags
 add more analytics
