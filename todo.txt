@@ -1,8 +1,8 @@
-fix ratelimit issue
+fix link expiration issue
 add .txt and other sitemap fies
 seo and other meta tags
-add more analytics
 
+add more analytics
 
 features: library & other integration addons 
 features: QR 

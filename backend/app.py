@@ -8,7 +8,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Response
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
@@ -94,6 +94,22 @@ async def background_safe_browsing_check(short_url: str, long_url: str):
     if not is_safe:
         mark_url_banned(short_url)
         ban_in_cache(short_url)
+
+@app.get("/robots.txt")
+async def robots():
+    with open(os.path.join(FRONTEND_DIR, "robots.txt"), encoding="utf-8") as f:
+        return Response(content=f.read(), media_type="text/plain")
+
+@app.get("/sitemap.xml")
+async def sitemap():
+    with open(os.path.join(FRONTEND_DIR, "sitemap.xml"), encoding="utf-8") as f:
+        return Response(content=f.read(), media_type="application/xml")
+
+@app.get("/security.txt")
+@app.get("/.well-known/security.txt")
+async def security():
+    with open(os.path.join(FRONTEND_DIR, "security.txt"), encoding="utf-8") as f:
+        return Response(content=f.read(), media_type="text/plain")
 
 @app.get("/", response_class=HTMLResponse)
 async def index():  

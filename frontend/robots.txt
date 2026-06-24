@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Allow: /contact
+Allow: /login
+Allow: /security.txt
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /analytics/
+Disallow: /Expired
+Disallow: /BANNED
+
+Sitemap: https://link.zerodaily.in/sitemap.xml
