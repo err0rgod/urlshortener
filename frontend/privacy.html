@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <script>
-        // Check theme preference before rendering to prevent flashing
-        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        // Check theme preference before rendering to prevent flashing (default to light)
+        if (localStorage.getItem('theme') === 'dark') {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
