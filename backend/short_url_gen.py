@@ -42,24 +42,35 @@ def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[i
         return exists
     db_exp_time = None
     if isinstance(exp_time, datetime):
-        db_exp_time = exp_time
+        db_exp_time = exp_time.astimezone(UTC).replace(tzinfo=None) if exp_time.tzinfo else exp_time
     elif isinstance(exp_time, int):
-        db_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
+        db_exp_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
     short_url = get_short_url()
     url = urldata(
         short_url=short_url,
         long_url=long_url,
-        created_at= datetime.now(UTC),
+        created_at=datetime.now(UTC).replace(tzinfo=None),
         click_count=0,
         user_id=user_id,
         exp_time=db_exp_time
     )
+    
+    # Calculate correct Redis cache TTL
+    redis_ttl = 3600
+    is_expired = False
+    if db_exp_time:
+        now_naive = datetime.now(UTC).replace(tzinfo=None)
+        seconds_left = int((db_exp_time - now_naive).total_seconds())
+        if seconds_left <= 0:
+            is_expired = True
+        else:
+            redis_ttl = min(3600, seconds_left)
+
     try:
-        redis_client.set(
-            short_url,
-            long_url,
-            ex=3600
-            )
+        if is_expired:
+            redis_client.set(short_url, "Expired", ex=3600)
+        else:
+            redis_client.set(short_url, long_url, ex=redis_ttl)
     except Exception as re:
         logger.warning(f"Redis is Offline falling back to Database: {re}")
     add_to_db(url)
@@ -76,23 +87,34 @@ def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_ti
     else:
         db_exp_time = None
         if isinstance(exp_time, datetime):
-            db_exp_time = exp_time
+            db_exp_time = exp_time.astimezone(UTC).replace(tzinfo=None) if exp_time.tzinfo else exp_time
         elif isinstance(exp_time, int):
-            db_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
+            db_exp_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
         url = urldata(
             short_url=custom_alias,
             long_url=long_url,
-            created_at=datetime.now(UTC),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
             click_count=0,
             user_id=user_id,
             exp_time=db_exp_time
         )
+        
+        # Calculate correct Redis cache TTL
+        redis_ttl = 3600
+        is_expired = False
+        if db_exp_time:
+            now_naive = datetime.now(UTC).replace(tzinfo=None)
+            seconds_left = int((db_exp_time - now_naive).total_seconds())
+            if seconds_left <= 0:
+                is_expired = True
+            else:
+                redis_ttl = min(3600, seconds_left)
+
         try:
-            redis_client.set(
-                custom_alias,
-                long_url,
-                ex=3600
-                )
+            if is_expired:
+                redis_client.set(custom_alias, "Expired", ex=3600)
+            else:
+                redis_client.set(custom_alias, long_url, ex=redis_ttl)
         except Exception as re:
             logger.warning(f"Redis is Offline falling back to Database: {re}")
         add_to_db(url)
@@ -110,19 +132,54 @@ def serve_url(short_url : str):
         logger.warning(f"Redis Offline, falling back to database: {re}")
     if cached:
         return cached
-    else:   
-        long_url = get_long_url(short_url)
-        if long_url:
-            try:
-                redis_client.set(
-                    short_url,
-                    long_url,
-                    ex=3600
-                )
-            except Exception as re:
-                logger.warning(f"Redis Offline, no cache storage available: {re}")
-            return long_url
-            
-        else:
+
+    from sqlmodel import Session, select
+    from database import engine
+    from models import urldata
+    
+    with Session(engine) as session:
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url = session.exec(statement).first()
+        if url is None:
             logger.info(f"URL resolution requested but code does not exist: {short_url}")
+            return None
+            
+        # Check expiration
+        is_expired = False
+        if url.exp_time:
+            exp_utc = url.exp_time.astimezone(UTC).replace(tzinfo=None) if url.exp_time.tzinfo else url.exp_time
+            now_utc = datetime.now(UTC).replace(tzinfo=None)
+            if exp_utc < now_utc:
+                is_expired = True
+                
+        if is_expired:
+            try:
+                redis_client.set(short_url, "Expired", ex=3600)
+            except Exception as re:
+                logger.warning(f"Redis Offline: {re}")
+            return "Expired"
+            
+        if url.is_banned:
+            try:
+                redis_client.set(short_url, "BANNED", ex=3600)
+            except Exception as re:
+                logger.warning(f"Redis Offline: {re}")
+            return "BANNED"
+            
+        # Calculate correct Redis cache TTL
+        redis_ttl = 3600
+        if url.exp_time:
+            exp_utc = url.exp_time.astimezone(UTC).replace(tzinfo=None) if url.exp_time.tzinfo else url.exp_time
+            now_utc = datetime.now(UTC).replace(tzinfo=None)
+            seconds_left = int((exp_utc - now_utc).total_seconds())
+            if seconds_left > 0:
+                redis_ttl = min(3600, seconds_left)
+                
+        # Cache the valid long URL
+        try:
+            redis_client.set(short_url, url.long_url, ex=redis_ttl)
+        except Exception as re:
+            logger.warning(f"Redis Offline: {re}")
+            
+        return url.long_url
 

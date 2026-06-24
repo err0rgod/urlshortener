@@ -62,8 +62,11 @@ def get_long_url(short_url: str) -> Optional[str]:
         url = session.exec(statement).first()
         if url is None:
             return None
-        if url.exp_time and url.exp_time < datetime.now(UTC):
-            return "Expired"
+        if url.exp_time:
+            exp_utc = url.exp_time.astimezone(UTC).replace(tzinfo=None) if url.exp_time.tzinfo else url.exp_time
+            now_utc = datetime.now(UTC).replace(tzinfo=None)
+            if exp_utc < now_utc:
+                return "Expired"
         if url.is_banned:
             return "BANNED"
             
@@ -133,7 +136,7 @@ def create_user(email: str, full_name: str, oauth_provider: str, oauth_id: str) 
             full_name=full_name,
             oauth_id=oauth_id,
             oauth_provider=oauth_provider,
-            created_at=datetime.now(UTC),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
             tier="free"
         )
         session.add(user)

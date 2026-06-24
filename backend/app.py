@@ -154,6 +154,15 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
         referer=clean_referer
     )
     add_clicklog(log)
+    
+    # Increment redirection count on the urldata record
+    with Session(engine) as db_session:
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url_entry = db_session.exec(statement).first()
+        if url_entry:
+            url_entry.click_count += 1
+            db_session.add(url_entry)
+            db_session.commit()
 
 
 
@@ -518,6 +527,10 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
         with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
             return HTMLResponse(content=f.read(), status_code=403)
             
+    if long_url == "Expired":
+        with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
+            return HTMLResponse(content=f.read(), status_code=410)
+            
     if long_url:
         client_ip = request.client.host
         user_agent = request.headers.get("user-agent","")
@@ -567,9 +580,9 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
 
     # Enforce limits for free tier
     if user_tier == "free":
-        max_exp = datetime.now(UTC) + timedelta(days=15)
+        max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=15)
         if exp_time:
-            requested_exp = datetime.now(UTC) + timedelta(hours=exp_time)
+            requested_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
             computed_exp_time = min(requested_exp, max_exp)
         else:
             computed_exp_time = max_exp
@@ -577,8 +590,8 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         # Limit checks for registered users
         if user_id:
             with Session(engine) as db_session:
-                one_day_ago = datetime.now(UTC) - timedelta(days=1)
-                thirty_days_ago = datetime.now(UTC) - timedelta(days=30)
+                one_day_ago = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
+                thirty_days_ago = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=30)
                 
                 daily_count = db_session.exec(
                     select(func.count(urldata.short_url))
@@ -606,7 +619,7 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
     else:
         # Premium tier
         if exp_time:
-            computed_exp_time = datetime.now(UTC) + timedelta(hours=exp_time)
+            computed_exp_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
         else:
             computed_exp_time = None
 

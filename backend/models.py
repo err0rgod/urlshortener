@@ -27,7 +27,7 @@ class urldata(SQLModel, table=True):
 
     short_url: str = Field(primary_key=True, index=True, nullable=False, max_length=20, unique=True)  # SonyFlake base62 or custom alias
     long_url: str = Field(nullable=False, unique=True)  # Destination URL
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     click_count: int = Field(default=0)
     is_banned: bool = Field(default=False)  # Flagged by Google Safe Browsing API check
     user_id: Optional[int] = Field(default=None, foreign_key="users.id")  # Owner identifier
@@ -42,7 +42,7 @@ class clicklog(SQLModel, table=True):
 
     id: int = Field(primary_key=True, nullable=False, index=True)
     short_url: str = Field(nullable=False, foreign_key="urldata.short_url")  # Reference to shortened link
-    clicked_at: datetime = Field(nullable=False, default=datetime.now(UTC))
+    clicked_at: datetime = Field(nullable=False, default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     ip_address: str = Field(nullable=False, default="NA")
     country: str = Field(nullable=False, default="NA")
     browser: str = Field(nullable=False, default="NA")
