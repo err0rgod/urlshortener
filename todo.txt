@@ -1,3 +1,9 @@
+dark mode and fix contrast
+add .txt and other sitemap fies
+seo and other meta tags
+add more analytics
+
+
 features: library & other integration addons 
 features: QR 
 features: api keys & billing
@@ -6,3 +12,6 @@ seprate the free tier and other premium tier set rate limits
 features: password protected URL's
 features: offload URL shortener like i sell them the product for 199$
 add professional email arch
+add turnstile and zerotrudt on admin pages other cloud flare features 
+load test
+create web crawler for leads
