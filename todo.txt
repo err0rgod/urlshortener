@@ -1,11 +1,10 @@
-fix link expiration issue
-add .txt and other sitemap fies
-seo and other meta tags
-
+read codebase 
 add more analytics
-
+add payment page 
+more from chatgpt history
+add optimizations from load test website 
 features: library & other integration addons 
-features: QR 
+
 features: api keys & billing
 email validation for quotes 
 seprate the free tier and other premium tier set rate limits 
