@@ -1,12 +1,9 @@
 add payment page 
-libs & api keys
+
+domain connect 
 
 add optimizations from load test website 
-features: library & other integration addons 
 
-features: api keys & billing
-features: password protected URL's
-features: offload URL shortener like i sell them the product for 199$
+features:  billing
 add turnstile and zerotrust on admin pages other cloud flare features 
-load test
 create web crawler for leads

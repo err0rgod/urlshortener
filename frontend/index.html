@@ -34,6 +34,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Razorpay Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -583,14 +585,14 @@
                         <div class="text-3xl font-extrabold text-slate-900 mb-6">$19<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
                         <ul class="space-y-3.5 mb-8">
                             <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Unlimited short redirects</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> 3 Custom Domain Names</li>
+                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Custom domain integration</li>
                             <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Extended location reports</li>
                             <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Full API Integration & SDKs</li>
                         </ul>
                     </div>
-                    <a href="/login?mode=signup" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="handleProUpgrade()" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         Get Started
-                    </a>
+                    </button>
                 </div>
                 
                 <!-- Tier 3: Enterprise Tenant -->
@@ -728,6 +730,92 @@
     </footer>
 
     <script>
+        async function handleProUpgrade(plan = 'startup') {
+            try {
+                const response = await fetch('/auth/me');
+                if (!response.ok) {
+                    window.location.href = `/login?upgrade=1&plan=${plan}`;
+                    return;
+                }
+                const data = await response.json();
+                if (!data.logged_in) {
+                    window.location.href = `/login?upgrade=1&plan=${plan}`;
+                    return;
+                }
+                
+                if (data.user.tier === 'premium') {
+                    alert("You are already a Premium user!");
+                    window.location.href = '/dashboard';
+                    return;
+                }
+                
+                const orderResp = await fetch('/api/payments/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plan })
+                });
+                if (!orderResp.ok) {
+                    const orderData = await orderResp.json();
+                    alert(orderData.detail || "Failed to initiate payment");
+                    return;
+                }
+                const orderData = await orderResp.json();
+                
+                const options = {
+                    key: orderData.key_id,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "FlexURL Premium",
+                    description: "Unlock link editing, scheduled activation, and OS targeting",
+                    order_id: orderData.order_id,
+                    handler: async function (paymentResponse) {
+                        try {
+                            const verifyResponse = await fetch('/api/payments/verify', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                    razorpay_signature: paymentResponse.razorpay_signature
+                                })
+                            });
+                            if (!verifyResponse.ok) {
+                                const verifyData = await verifyResponse.json();
+                                alert(verifyData.detail || "Payment verification failed");
+                                return;
+                            }
+                            alert("Payment Successful! Upgraded to Premium.");
+                            window.location.href = '/dashboard';
+                        } catch (err) {
+                            console.error("Verification call failed:", err);
+                            alert("Verification connection failed");
+                        }
+                    },
+                    prefill: {
+                        name: data.user.full_name,
+                        email: data.user.email
+                    },
+                    theme: {
+                        color: "#4f46e5"
+                    }
+                };
+                
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (resp){
+                    alert("Payment failed: " + resp.error.description);
+                });
+                rzp.open();
+                
+            } catch (err) {
+                console.error("Upgrade flow failed:", err);
+                alert("Failed to connect to payment gateway");
+            }
+        }
+
         // Check authentication state on load
         async function checkAuthStatus() {
             try {

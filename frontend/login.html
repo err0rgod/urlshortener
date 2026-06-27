@@ -238,6 +238,12 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
+        function getRedirectUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const plan = params.get('plan') || 'startup';
+            return params.get('upgrade') === '1' ? `/dashboard?upgrade=1&plan=${plan}` : '/dashboard';
+        }
+
         // Redirect to homepage if user is already logged in on the backend
         async function checkAuthAndRedirect() {
             try {
@@ -245,7 +251,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.logged_in) {
-                        window.location.href = '/dashboard';
+                        window.location.href = getRedirectUrl();
                     }
                 }
             } catch (err) {
@@ -264,7 +270,7 @@
                 });
                 
                 if (response.ok) {
-                    window.location.href = '/dashboard';
+                    window.location.href = getRedirectUrl();
                 } else {
                     const err = await response.json();
                     showError(err.detail || 'Authentication failed on backend');

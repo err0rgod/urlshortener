@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime, UTC, timedelta
 from dotenv import load_dotenv
 from sqlmodel import Session, select
+from unittest.mock import patch
 
 # Add backend directory to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "backend"))
@@ -337,5 +338,58 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["content-type"], "video/mp4")
 
+    def test_create_payment_order_unauthorized(self):
+        response = self.client.post("/api/payments/create-order", json={"plan": "startup"})
+        self.assertEqual(response.status_code, 401)
+
+    @patch("app.razorpay_client")
+    def test_create_payment_order_success(self, mock_rz):
+        import jwt
+        from app import JWT_SECRET_KEY
+        
+        mock_rz.order.create.return_value = {
+            "id": "order_test_123",
+            "amount": 150000,
+            "currency": "INR"
+        }
+        
+        token = jwt.encode({"user_id": self.free_user.id, "email": self.free_user.email}, JWT_SECRET_KEY, algorithm="HS256")
+        self.client.cookies.set("session_token", token)
+        
+        response = self.client.post("/api/payments/create-order", json={"plan": "startup"})
+        self.assertEqual(response.status_code, 200)
+        res_json = response.json()
+        self.assertEqual(res_json["order_id"], "order_test_123")
+        self.assertEqual(res_json["amount"], 150000)
+        self.assertEqual(res_json["currency"], "INR")
+
+    @patch("app.razorpay_client")
+    def test_verify_payment_success(self, mock_rz):
+        import jwt
+        from app import JWT_SECRET_KEY
+        
+        # mock signature verification to pass
+        mock_rz.utility.verify_payment_signature.return_value = True
+        
+        token = jwt.encode({"user_id": self.free_user.id, "email": self.free_user.email}, JWT_SECRET_KEY, algorithm="HS256")
+        self.client.cookies.set("session_token", token)
+        
+        payload = {
+            "razorpay_order_id": "order_test_123",
+            "razorpay_payment_id": "pay_test_123",
+            "razorpay_signature": "sig_test_123"
+        }
+        response = self.client.post("/api/payments/verify", json=payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "success")
+        
+        # Verify user upgraded to premium in DB
+        from models import User
+        with Session(engine) as db_session:
+            user = db_session.get(User, self.free_user.id)
+            self.assertEqual(user.tier, "premium")
+
 if __name__ == "__main__":
+    from unittest.mock import patch
+    import unittest
     unittest.main()

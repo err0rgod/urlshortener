@@ -18,6 +18,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Razorpay Checkout SDK -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -322,6 +324,14 @@
                                 <span class="text-slate-400 font-medium">Subscription Tier</span>
                                 <span id="profile-tier-badge" class="bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Free</span>
                             </div>
+                            <div id="upgrade-button-container" class="mt-4 pt-4 border-t border-slate-150 hidden space-y-2">
+                                <button onclick="startUpgrade('startup')" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
+                                    Startup Choice (Rs 1500)
+                                </button>
+                                <button onclick="startUpgrade('business')" class="w-full py-2 px-4 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
+                                    Business Pro (Rs 3900)
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -510,9 +520,13 @@
                         document.getElementById('profile-auth-method').textContent = data.user.email ? 'Firebase/Email' : 'Google Auth';
                         
                         const tierBadge = document.getElementById('profile-tier-badge');
+                        const upgradeContainer = document.getElementById('upgrade-button-container');
                         tierBadge.textContent = data.user.tier || 'free';
                         if (data.user.tier === 'premium') {
                             tierBadge.className = "bg-amber-50 text-amber-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200";
+                            if (upgradeContainer) {
+                                upgradeContainer.classList.add('hidden');
+                            }
                             
                             // Show premium welcome banner
                             const premiumBanner = document.getElementById('premium-banner');
@@ -521,6 +535,17 @@
                             }
                         } else {
                             tierBadge.className = "bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-indigo-200";
+                            if (upgradeContainer) {
+                                upgradeContainer.classList.remove('hidden');
+                            }
+                        }
+                        
+                        const params = new URLSearchParams(window.location.search);
+                        if (params.get('upgrade') === '1' && data.user.tier !== 'premium') {
+                            const plan = params.get('plan') || 'startup';
+                            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                            window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                            startUpgrade(plan);
                         }
                     } else {
                         window.location.href = '/login';
@@ -662,6 +687,74 @@
             const originalSvg = btn.innerHTML;
             btn.innerHTML = `<svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
             setTimeout(() => btn.innerHTML = originalSvg, 2000);
+        }
+
+        async function startUpgrade(plan = 'startup') {
+            try {
+                const response = await fetch('/api/payments/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plan })
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    alert(data.detail || "Failed to initiate payment");
+                    return;
+                }
+                const orderData = await response.json();
+                
+                const options = {
+                    key: orderData.key_id,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "FlexURL Premium",
+                    description: "Unlock link editing, scheduled activation, and OS targeting",
+                    order_id: orderData.order_id,
+                    handler: async function (paymentResponse) {
+                        try {
+                            const verifyResponse = await fetch('/api/payments/verify', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                    razorpay_signature: paymentResponse.razorpay_signature
+                                })
+                            });
+                            if (!verifyResponse.ok) {
+                                const verifyData = await verifyResponse.json();
+                                alert(verifyData.detail || "Payment verification failed");
+                                return;
+                            }
+                            alert("Payment Successful! Upgraded to Premium.");
+                            window.location.reload();
+                        } catch (err) {
+                            console.error("Verification call failed:", err);
+                            alert("Verification connection failed");
+                        }
+                    },
+                    prefill: {
+                        name: document.getElementById('profile-name').textContent,
+                        email: document.getElementById('profile-email').textContent
+                    },
+                    theme: {
+                        color: "#4f46e5"
+                    }
+                };
+                
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (resp){
+                    alert("Payment failed: " + resp.error.description);
+                });
+                rzp.open();
+            } catch (err) {
+                console.error("Upgrade flow failed:", err);
+                alert("Failed to contact payment gateway");
+            }
         }
 
         // Helper to format ISO datetime string to datetime-local input format (YYYY-MM-DDTHH:MM)

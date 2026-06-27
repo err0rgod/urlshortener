@@ -30,6 +30,14 @@ from report_scheduler import daily_report_scheduler_loop
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
+import razorpay
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
+razorpay_client = None
+if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET:
+    razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
 FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
 
 init_db() #for initialising table structure
@@ -253,6 +261,90 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
                                 logger.warning(f"Failed to deliver webhook to {url}: {e}")
                     
                     asyncio.create_task(send_webhook(url_entry.webhook_url, webhook_payload))
+
+
+class PaymentOrderRequest(BaseModel):
+    plan: str # "startup" or "business"
+
+
+class PaymentVerifyRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+@app.post("/api/payments/create-order")
+async def create_payment_order(req_data: PaymentOrderRequest, request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay client not configured")
+        
+    try:
+        amount = 390000 if req_data.plan == "business" else 150000
+        order_data = {
+            "amount": amount,
+            "currency": "INR",
+            "receipt": f"receipt_{user_id}_{int(time.time())}"
+        }
+        order = razorpay_client.order.create(data=order_data)
+        return {
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "key_id": RAZORPAY_KEY_ID
+        }
+    except Exception as e:
+        logger.error(f"Error creating Razorpay order: {e}")
+        raise HTTPException(status_code=500, detail="Failed to initiate payment")
+
+
+@app.post("/api/payments/verify")
+async def verify_payment(req_data: PaymentVerifyRequest, request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay client not configured")
+        
+    try:
+        params = {
+            'razorpay_order_id': req_data.razorpay_order_id,
+            'razorpay_payment_id': req_data.razorpay_payment_id,
+            'razorpay_signature': req_data.razorpay_signature
+        }
+        razorpay_client.utility.verify_payment_signature(params)
+    except Exception as e:
+        logger.error(f"Signature verification failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid payment signature")
+        
+    with Session(engine) as db_session:
+        user = db_session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        user.tier = "premium"
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+        
+    return {"status": "success", "message": "Successfully upgraded to Premium!"}
 
 
 # analytics endpoint for specific short url only accessed by owner
