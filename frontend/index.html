@@ -192,65 +192,8 @@
                                     <option value="72">3 Days</option>
                                     <option value="168">7 Days</option>
                                 </select>
-                        </div>
-                    </div>
-
-                    <!-- Premium Link Settings (Only visible to Premium Users) -->
-                    <div id="premium-options-container" class="hidden border-t border-slate-100 dark:border-slate-800 pt-4 mt-4 space-y-4 text-left">
-                        <h4 class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                            <span>Premium Settings</span>
-                        </h4>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- Password Protection -->
-                            <div class="flex flex-col gap-1.5">
-                                <label for="premium_password" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Password Protection</label>
-                                <input type="password" id="premium_password" placeholder="Require password to access link"
-                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
-                            </div>
-                            
-                            <!-- Custom Fallback URL -->
-                            <div class="flex flex-col gap-1.5">
-                                <label for="premium_fallback_url" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Custom Expired Fallback URL</label>
-                                <input type="text" id="premium_fallback_url" placeholder="Redirect here after expiration (e.g. https://mysite.com/expired)"
-                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
                             </div>
                         </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- iOS Destination -->
-                            <div class="flex flex-col gap-1.5">
-                                <label for="premium_ios_url" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">iOS Redirect URL</label>
-                                <input type="text" id="premium_ios_url" placeholder="Redirect iOS users to this URL"
-                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
-                            </div>
-
-                            <!-- Android Destination -->
-                            <div class="flex flex-col gap-1.5">
-                                <label for="premium_android_url" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Android Redirect URL</label>
-                                <input type="text" id="premium_android_url" placeholder="Redirect Android users to this URL"
-                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
-                            </div>
-                        </div>
-
-                        <!-- Webhook URL -->
-                        <div class="flex flex-col gap-1.5">
-                            <label for="premium_webhook_url" class="text-[11px] font-bold text-slate-500 dark:text-slate-400">Real-time Webhook URL</label>
-                            <input type="text" id="premium_webhook_url" placeholder="Send HTTP POST on redirects (e.g. https://myapi.com/webhook)"
-                                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
-                        </div>
-                    </div>
-
-                    <!-- Upgrade Promo for Free Users -->
-                    <div id="premium-upgrade-promo" class="hidden border-t border-slate-100 dark:border-slate-800 pt-4 mt-4 text-xs text-slate-500 dark:text-slate-400 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-left">
-                        <div class="space-y-0.5">
-                            <span class="font-bold text-indigo-700 dark:text-indigo-400">Unlock Premium features!</span>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Get password gates, iOS/Android targeting, webhooks, and custom expired fallbacks.</p>
-                        </div>
-                        <button type="button" onclick="upgradeToPremium()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-3 rounded-lg text-[11px] transition-colors whitespace-nowrap self-end sm:self-center">
-                            Upgrade Now
-                        </button>
                     </div>
                 </form>
 
@@ -667,25 +610,6 @@
     </footer>
 
     <script>
-        let isPremiumUser = false;
-
-        // Upgrade tier helper
-        async function upgradeToPremium() {
-            try {
-                const response = await fetch('/api/user/toggle-tier', { method: 'POST' });
-                if (response.ok) {
-                    const data = await response.json();
-                    alert(`Congratulations! You have upgraded to ${data.tier.toUpperCase()} tier.`);
-                    window.location.reload();
-                } else {
-                    alert('Please log in first to upgrade to premium.');
-                    window.location.href = '/login';
-                }
-            } catch (err) {
-                alert('Connection error.');
-            }
-        }
-
         // Check authentication state on load
         async function checkAuthStatus() {
             try {
@@ -703,17 +627,6 @@
                                 </a>
                             `;
                         }
-
-                        // Premium UI conditional display
-                        if (data.user.tier === 'premium') {
-                            isPremiumUser = true;
-                            document.getElementById('premium-options-container').classList.remove('hidden');
-                        } else {
-                            document.getElementById('premium-upgrade-promo').classList.remove('hidden');
-                        }
-                    } else {
-                        // Upgrade promo for guest users
-                        document.getElementById('premium-upgrade-promo').classList.remove('hidden');
                     }
                 }
             } catch (err) {
@@ -769,13 +682,6 @@
             const enable_expiry = enableExpiryCheckbox.checked;
             const exp_time = enable_expiry ? expiryHoursSelect.value : '';
 
-            // Retrieve premium fields
-            const password = isPremiumUser ? (document.getElementById('premium_password').value || null) : null;
-            const fallback_url = isPremiumUser ? (document.getElementById('premium_fallback_url').value || null) : null;
-            const ios_url = isPremiumUser ? (document.getElementById('premium_ios_url').value || null) : null;
-            const android_url = isPremiumUser ? (document.getElementById('premium_android_url').value || null) : null;
-            const webhook_url = isPremiumUser ? (document.getElementById('premium_webhook_url').value || null) : null;
-
             try {
                 let url = '/shorten';
                 const params = [];
@@ -792,14 +698,7 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        long_url,
-                        password,
-                        fallback_url,
-                        ios_url,
-                        android_url,
-                        webhook_url
-                    })
+                    body: JSON.stringify({ long_url })
                 });
 
                 const data = await response.json();

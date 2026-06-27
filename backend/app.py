@@ -252,6 +252,14 @@ async def get_url_analytics(short_url: str, request: Request):
         if url_entry.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
+        # Check if user is premium
+        user = db_session.get(User, user_id)
+        if not user or user.tier != "premium":
+            raise HTTPException(
+                status_code=403, 
+                detail="Analytics are a premium feature. Please upgrade your subscription."
+            )
+
         # Clicks by date
         by_date_query = db_session.exec(
             select(func.date(clicklog.clicked_at), func.count(clicklog.id))
@@ -354,6 +362,9 @@ async def dashboard(request: Request):
 # gives users recent clicks auth required
 @app.get("/api/user/recent-clicks")
 async def get_recent_clicks(request: Request, limit: int = 10):
+    # Constrain limit to prevent database memory exhaustion
+    limit = max(1, min(limit, 100))
+    
     token = request.cookies.get("session_token")
     if not token:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -516,6 +527,14 @@ async def toggle_user_tier(request: Request):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
+        # Enforce that only the admin email can manually toggle tiers
+        admin_email = os.getenv("ADMIN_EMAIL")
+        if not admin_email or user.email != admin_email:
+            raise HTTPException(
+                status_code=403, 
+                detail="Only the administrator can manually toggle tiers."
+            )
+        
         # Toggle tier
         user.tier = "premium" if user.tier == "free" else "free"
         db_session.add(user)
@@ -642,6 +661,14 @@ async def analytics(short_url: str, request: Request):
             raise HTTPException(status_code=404, detail="Short URL not found")
         if url_entry.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
+
+        # Check if user is premium
+        user = db_session.get(User, user_id)
+        if not user or user.tier != "premium":
+            raise HTTPException(
+                status_code=403, 
+                detail="Analytics are a premium feature. Please upgrade your subscription."
+            )
 
         # Clicks by date
         by_date_query = db_session.exec(
@@ -889,9 +916,15 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             if db_user:
                 user_tier = db_user.tier
 
-    # Enforce limits for free tier
+    # Enforce limits for free/anonymous tier
     if user_tier == "free":
-        max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=7)
+        if not user_id:
+            # Anonymous creation: max expiration is 1 day (24 hours)
+            max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
+        else:
+            # Registered free accounts: max expiration is 15 days
+            max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=15)
+
         if exp_time:
             requested_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
             computed_exp_time = min(requested_exp, max_exp)
@@ -927,6 +960,30 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
                         status_code=400,
                         detail="Monthly limit reached. Free accounts are limited to 100 URLs per month."
                     )
+        else:
+            # Limit checks for anonymous guest users using Redis
+            client_ip = req.client.host
+            forwarded = req.headers.get("X-Forwarded-For")
+            if forwarded:
+                client_ip = forwarded.split(",")[0].strip()
+                
+            from short_url_gen import redis_client
+            redis_key = f"anon_limit:{client_ip}"
+            try:
+                current_count = redis_client.incr(redis_key)
+                if current_count == 1:
+                    redis_client.expire(redis_key, 86400) # 24 hours
+                
+                if current_count > 5:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Anonymous URL creation limit reached (5 per day). Please create a free account to shorten more links."
+                    )
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    raise e
+                # Fallback gracefully if Redis fails
+                pass
     else:
         # Premium tier
         if exp_time:
@@ -940,6 +997,17 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         ios_url = request.ios_url if user_tier == "premium" else None
         android_url = request.android_url if user_tier == "premium" else None
         fallback_url = request.fallback_url if user_tier == "premium" else None
+
+        # SSRF Protection: Validate premium parameters if supplied
+        if webhook_url and not await is_valid_url(webhook_url):
+            raise HTTPException(status_code=400, detail="Invalid, insecure, or private webhook URL")
+        if ios_url and not await is_valid_url(ios_url):
+            raise HTTPException(status_code=400, detail="Invalid, insecure, or private iOS redirect URL")
+        if android_url and not await is_valid_url(android_url):
+            raise HTTPException(status_code=400, detail="Invalid, insecure, or private Android redirect URL")
+        if fallback_url and not await is_valid_url(fallback_url):
+            raise HTTPException(status_code=400, detail="Invalid, insecure, or private fallback URL")
+
         password_hash = None
         if request.password and user_tier == "premium":
             import hashlib
