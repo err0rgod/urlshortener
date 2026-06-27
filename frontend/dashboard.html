@@ -386,6 +386,89 @@
         </div>
     </div>
 
+    <!-- Edit URL Modal -->
+    <div id="edit-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-6 transform scale-95 transition-transform duration-300">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Edit Shortened URL Settings</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 transition-colors">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <form id="edit-form" class="space-y-4 text-left">
+                <input type="hidden" id="edit-short-url">
+                
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Destination URL (Required)</label>
+                    <input type="url" id="edit-long-url" required placeholder="https://example.com/target"
+                        class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Real-time Webhook URL</label>
+                        <input type="url" id="edit-webhook-url" placeholder="https://your-api.com/webhook"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Passcode Protection (Leave blank to keep, type "REMOVE" to disable)</label>
+                        <input type="password" id="edit-password" placeholder="New passcode"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">iOS Redirect URL</label>
+                        <input type="url" id="edit-ios-url" placeholder="iOS target URL"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Android Redirect URL</label>
+                        <input type="url" id="edit-android-url" placeholder="Android target URL"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fallback URL (Post-Expiry)</label>
+                        <input type="url" id="edit-fallback-url" placeholder="Expired fallback URL"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Scheduled Activation Time</label>
+                        <input type="datetime-local" id="edit-activation-time"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custom Countdown Redirect</label>
+                        <input type="url" id="edit-custom-countdown-url" placeholder="https://example.com/countdown"
+                            class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Expiration Date / Time (Leave blank to remove expiry)</label>
+                    <input type="datetime-local" id="edit-exp-time"
+                        class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                </div>
+
+                <div id="edit-error" class="hidden p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs rounded-lg"></div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeEditModal()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold py-2 px-4 border border-slate-200 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-6 px-4 mt-auto">
         <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -565,6 +648,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold space-x-2">
                         ${analyticsOption}
+                        ${userDetails && userDetails.tier === 'premium' ? `<button onclick="openEditModal('${link.short_url}')" class="text-indigo-600 hover:text-indigo-800 transition-colors">Edit</button>` : ''}
                         <button onclick="confirmDeleteLink('${link.short_url}')" class="text-rose-600 hover:text-rose-800 transition-colors">Delete</button>
                     </td>
                 `;
@@ -578,6 +662,52 @@
             const originalSvg = btn.innerHTML;
             btn.innerHTML = `<svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
             setTimeout(() => btn.innerHTML = originalSvg, 2000);
+        }
+
+        // Helper to format ISO datetime string to datetime-local input format (YYYY-MM-DDTHH:MM)
+        function formatDatetimeLocal(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return '';
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function openEditModal(shortUrl) {
+            const link = allLinks.find(l => l.short_url === shortUrl);
+            if (!link) return;
+
+            document.getElementById('edit-short-url').value = shortUrl;
+            document.getElementById('edit-long-url').value = link.long_url || '';
+            document.getElementById('edit-webhook-url').value = link.webhook_url || '';
+            document.getElementById('edit-password').value = ''; 
+            document.getElementById('edit-ios-url').value = link.ios_url || '';
+            document.getElementById('edit-android-url').value = link.android_url || '';
+            document.getElementById('edit-fallback-url').value = link.fallback_url || '';
+            document.getElementById('edit-activation-time').value = formatDatetimeLocal(link.activation_time);
+            document.getElementById('edit-custom-countdown-url').value = link.custom_countdown_url || '';
+            document.getElementById('edit-exp-time').value = formatDatetimeLocal(link.exp_time);
+            document.getElementById('edit-error').classList.add('hidden');
+
+            const modal = document.getElementById('edit-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.firstElementChild.classList.remove('scale-95');
+                modal.firstElementChild.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            modal.firstElementChild.classList.remove('scale-100');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 150);
         }
 
         // Custom Modal and Alert Controller
@@ -910,6 +1040,77 @@
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchUserDetails();
             await fetchUserLinks();
+
+            // Edit form submit listener
+            const editForm = document.getElementById('edit-form');
+            if (editForm) {
+                editForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const shortUrl = document.getElementById('edit-short-url').value;
+                    const errorEl = document.getElementById('edit-error');
+                    errorEl.classList.add('hidden');
+                    
+                    const long_url = document.getElementById('edit-long-url').value.trim();
+                    const webhook_url = document.getElementById('edit-webhook-url').value.trim();
+                    const password = document.getElementById('edit-password').value;
+                    const ios_url = document.getElementById('edit-ios-url').value.trim();
+                    const android_url = document.getElementById('edit-android-url').value.trim();
+                    const fallback_url = document.getElementById('edit-fallback-url').value.trim();
+                    const custom_countdown_url = document.getElementById('edit-custom-countdown-url').value.trim();
+                    
+                    let activation_time = null;
+                    const activationInput = document.getElementById('edit-activation-time').value;
+                    if (activationInput) {
+                        const d = new Date(activationInput);
+                        if (!isNaN(d.getTime())) {
+                            activation_time = d.toISOString();
+                        }
+                    } else {
+                        activation_time = ""; 
+                    }
+                    
+                    let exp_time = null;
+                    const expInput = document.getElementById('edit-exp-time').value;
+                    if (expInput) {
+                        const d = new Date(expInput);
+                        if (!isNaN(d.getTime())) {
+                            exp_time = d.toISOString();
+                        }
+                    } else {
+                        exp_time = ""; 
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/links/${shortUrl}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                long_url,
+                                webhook_url,
+                                password,
+                                ios_url,
+                                android_url,
+                                fallback_url,
+                                activation_time,
+                                custom_countdown_url,
+                                exp_time
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok) {
+                            closeEditModal();
+                            await fetchUserLinks();
+                        } else {
+                            errorEl.textContent = data.detail || 'Failed to save changes';
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Connection error. Please try again.';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+            }
         });
 
         // Theme Toggle Functionality

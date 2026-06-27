@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Activating Soon - FlexURL</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center overflow-hidden relative">
+    <!-- Radial Background Gradient -->
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+
+    <div class="z-10 flex flex-col items-center max-w-md w-full px-6 text-center">
+        <!-- Animated Shield SVG Graphic -->
+        <div class="relative flex items-center justify-center w-24 h-24 mb-8 bg-slate-900/80 rounded-full border border-slate-800 shadow-2xl backdrop-blur-sm group">
+            <div class="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl opacity-75 animate-pulse"></div>
+            <svg class="relative w-12 h-12 text-emerald-500 animate-pulse" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+        </div>
+
+        <!-- Heading -->
+        <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">
+            Link Activating Soon
+        </h1>
+        <p class="text-slate-400 text-sm mb-8 leading-relaxed">
+            This shortened URL has been scheduled by its creator. It will become accessible automatically when the countdown reaches zero.
+        </p>
+
+        <!-- Countdown Timer Card -->
+        <div id="countdown-container" class="grid grid-cols-4 gap-3 w-full max-w-xs mb-8">
+            <!-- Days -->
+            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="days" class="text-2xl font-bold text-white tracking-tight">00</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Days</span>
+            </div>
+            <!-- Hours -->
+            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="hours" class="text-2xl font-bold text-white tracking-tight">00</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Hrs</span>
+            </div>
+            <!-- Minutes -->
+            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="minutes" class="text-2xl font-bold text-white tracking-tight">00</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Min</span>
+            </div>
+            <!-- Seconds -->
+            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="seconds" class="text-2xl font-bold text-emerald-400 tracking-tight">00</span>
+                <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Sec</span>
+            </div>
+        </div>
+
+        <!-- Footer / Branding -->
+        <div class="text-xs text-slate-600 border-t border-slate-900/80 pt-6 w-full">
+            Powered by <span class="font-semibold text-slate-500">FlexURL</span>
+        </div>
+    </div>
+
+    <script>
+        window.__ACTIVATION_TIME__ = null;
+        
+        function startCountdown() {
+            const activationTimeStr = window.__ACTIVATION_TIME__;
+            if (!activationTimeStr) {
+                document.getElementById('countdown-container').innerHTML = `
+                    <div class="col-span-4 py-2 px-4 bg-slate-900/40 border border-slate-800 rounded-xl text-center text-xs text-slate-400">
+                        Activation time not configured yet.
+                    </div>
+                `;
+                return;
+            }
+
+            const targetDate = new Date(activationTimeStr);
+            if (isNaN(targetDate.getTime())) {
+                document.getElementById('countdown-container').innerHTML = `
+                    <div class="col-span-4 py-2 px-4 bg-slate-900/40 border border-slate-800 rounded-xl text-center text-xs text-slate-400">
+                        Invalid activation date format.
+                    </div>
+                `;
+                return;
+            }
+
+            const daysVal = document.getElementById('days');
+            const hoursVal = document.getElementById('hours');
+            const minutesVal = document.getElementById('minutes');
+            const secondsVal = document.getElementById('seconds');
+            
+            function updateTimer() {
+                const now = new Date();
+                const timeDiff = targetDate.getTime() - now.getTime();
+
+                if (timeDiff <= 0) {
+                    // Time's up! Reload the page to trigger redirect
+                    window.location.reload();
+                    return;
+                }
+
+                const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+                if (daysVal) daysVal.innerText = String(days).padStart(2, '0');
+                if (hoursVal) hoursVal.innerText = String(hours).padStart(2, '0');
+                if (minutesVal) minutesVal.innerText = String(minutes).padStart(2, '0');
+                if (secondsVal) secondsVal.innerText = String(seconds).padStart(2, '0');
+            }
+
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+        
+        window.addEventListener('DOMContentLoaded', startCountdown);
+    </script>
+</body>
+</html>

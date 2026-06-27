@@ -1,17 +1,12 @@
-create seprate middleware for auth 
-allow only premium users to create custom urls and limit the anonymous links to just one day and logged in users to 15 days, limit the analytics to just premium users. 
-logged in users will just see very minimal analytics like click count and also delete url and url list.
 add payment page 
-more from chatgpt history
+libs & api keys
+
 add optimizations from load test website 
 features: library & other integration addons 
 
 features: api keys & billing
-email validation for quotes 
-seprate the free tier and other premium tier set rate limits 
 features: password protected URL's
 features: offload URL shortener like i sell them the product for 199$
-add professional email arch
-add turnstile and zerotrudt on admin pages other cloud flare features 
+add turnstile and zerotrust on admin pages other cloud flare features 
 load test
 create web crawler for leads

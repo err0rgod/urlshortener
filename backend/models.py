@@ -37,6 +37,8 @@ class urldata(SQLModel, table=True):
     android_url: Optional[str] = Field(default=None)  # Premium: targeted redirect destination for Android users
     password_hash: Optional[str] = Field(default=None)  # Premium: secure link access password hash
     fallback_url: Optional[str] = Field(default=None)  # Premium: fallback destination URL after expiration
+    activation_time: Optional[datetime] = Field(default=None)  # Premium: scheduled activation time
+    custom_countdown_url: Optional[str] = Field(default=None)  # Premium: custom countdown destination URL
 
 class clicklog(SQLModel, table=True):
     """

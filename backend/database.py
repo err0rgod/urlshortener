@@ -23,6 +23,8 @@ def init_db():
     with Session(engine) as session:
         try:
             session.exec(text("ALTER TABLE urldata DROP CONSTRAINT IF EXISTS urldata_long_url_key;"))
+            session.exec(text("ALTER TABLE urldata ADD COLUMN IF NOT EXISTS activation_time TIMESTAMP WITHOUT TIME ZONE;"))
+            session.exec(text("ALTER TABLE urldata ADD COLUMN IF NOT EXISTS custom_countdown_url VARCHAR;"))
             session.commit()
         except Exception:
             pass

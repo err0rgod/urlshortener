@@ -98,6 +98,20 @@ class URLRequest(BaseModel):
     android_url: Optional[str] = Field(None, max_length=2048)
     password: Optional[str] = Field(None, max_length=255)
     fallback_url: Optional[str] = Field(None, max_length=2048)
+    activation_time: Optional[str] = Field(None)
+    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
+
+
+class URLEditRequest(BaseModel):
+    long_url: Optional[str] = Field(None, max_length=2048)
+    webhook_url: Optional[str] = Field(None, max_length=2048)
+    ios_url: Optional[str] = Field(None, max_length=2048)
+    android_url: Optional[str] = Field(None, max_length=2048)
+    password: Optional[str] = Field(None, max_length=255)
+    fallback_url: Optional[str] = Field(None, max_length=2048)
+    activation_time: Optional[str] = Field(None)
+    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
+    exp_time: Optional[str] = Field(None)
 
 
 # checks if the url is safe or not, if not marks them as banned in the Database & when a user visits a banned url he see's a banned url page
@@ -121,6 +135,18 @@ async def sitemap():
 async def security():
     with open(os.path.join(FRONTEND_DIR, "security.txt"), encoding="utf-8") as f:
         return Response(content=f.read(), media_type="text/plain")
+
+
+@app.get("/sad_meme.mp4")
+async def sad_meme():
+    from fastapi.responses import FileResponse
+    return FileResponse(os.path.join(FRONTEND_DIR, "sad_meme.mp4"), media_type="video/mp4")
+
+
+@app.get("/dancing_meme.mp4")
+async def dancing_meme():
+    from fastapi.responses import FileResponse
+    return FileResponse(os.path.join(FRONTEND_DIR, "dancing_meme.mp4"), media_type="video/mp4")
 
 
 # main website returns the index page
@@ -465,7 +491,9 @@ async def get_user_links(request: Request):
                 "ios_url": link.ios_url,
                 "android_url": link.android_url,
                 "fallback_url": link.fallback_url,
-                "has_password": bool(link.password_hash)
+                "has_password": bool(link.password_hash),
+                "activation_time": link.activation_time.isoformat() if link.activation_time else None,
+                "custom_countdown_url": link.custom_countdown_url
             })
         return result
 
@@ -573,6 +601,153 @@ async def toggle_user_tier(request: Request):
         db_session.commit()
         db_session.refresh(user)
         return {"status": "success", "tier": user.tier}
+
+
+# link editing endpoint (premium only)
+@app.patch("/api/links/{short_url}")
+async def edit_link(short_url: str, request: Request, edit_data: URLEditRequest):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    from datetime import datetime, UTC
+    with Session(engine) as db_session:
+        # Check if user is premium
+        user = db_session.get(User, user_id)
+        if not user or user.tier != "premium":
+            raise HTTPException(status_code=403, detail="Editing links is a premium-only feature.")
+
+        # Get link
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url_entry = db_session.exec(statement).first()
+        if not url_entry:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+        if url_entry.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        # Validate long_url if changing
+        if edit_data.long_url is not None:
+            if not await is_valid_url(edit_data.long_url):
+                raise HTTPException(status_code=400, detail="Invalid, insecure, or private long URL")
+            url_entry.long_url = edit_data.long_url
+
+        # Edit other fields
+        if edit_data.webhook_url is not None:
+            if edit_data.webhook_url != "":
+                if not await is_valid_url(edit_data.webhook_url):
+                    raise HTTPException(status_code=400, detail="Invalid, insecure, or private webhook URL")
+                url_entry.webhook_url = edit_data.webhook_url
+            else:
+                url_entry.webhook_url = None
+
+        if edit_data.ios_url is not None:
+            if edit_data.ios_url != "":
+                if not await is_valid_url(edit_data.ios_url):
+                    raise HTTPException(status_code=400, detail="Invalid, insecure, or private iOS URL")
+                url_entry.ios_url = edit_data.ios_url
+            else:
+                url_entry.ios_url = None
+
+        if edit_data.android_url is not None:
+            if edit_data.android_url != "":
+                if not await is_valid_url(edit_data.android_url):
+                    raise HTTPException(status_code=400, detail="Invalid, insecure, or private Android URL")
+                url_entry.android_url = edit_data.android_url
+            else:
+                url_entry.android_url = None
+
+        if edit_data.fallback_url is not None:
+            if edit_data.fallback_url != "":
+                if not await is_valid_url(edit_data.fallback_url):
+                    raise HTTPException(status_code=400, detail="Invalid, insecure, or private fallback URL")
+                url_entry.fallback_url = edit_data.fallback_url
+            else:
+                url_entry.fallback_url = None
+
+        if edit_data.custom_countdown_url is not None:
+            if edit_data.custom_countdown_url != "":
+                if not await is_valid_url(edit_data.custom_countdown_url):
+                    raise HTTPException(status_code=400, detail="Invalid, insecure, or private custom countdown URL")
+                url_entry.custom_countdown_url = edit_data.custom_countdown_url
+            else:
+                url_entry.custom_countdown_url = None
+
+        if edit_data.password is not None:
+            if edit_data.password == "REMOVE":
+                url_entry.password_hash = None
+            elif edit_data.password != "":
+                import hashlib
+                salt = "flexurl_salt_secure_2026"
+                url_entry.password_hash = hashlib.sha256((edit_data.password + salt).encode('utf-8')).hexdigest()
+
+        if edit_data.activation_time is not None:
+            if edit_data.activation_time != "":
+                try:
+                    val = edit_data.activation_time
+                    if val.endswith('Z'):
+                        val = val[:-1] + '+00:00'
+                    dt = datetime.fromisoformat(val)
+                    url_entry.activation_time = dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid activation time format")
+            else:
+                url_entry.activation_time = None
+
+        if edit_data.exp_time is not None:
+            if edit_data.exp_time != "":
+                try:
+                    val = edit_data.exp_time
+                    if val.endswith('Z'):
+                        val = val[:-1] + '+00:00'
+                    dt = datetime.fromisoformat(val)
+                    url_entry.exp_time = dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid expiration time format")
+            else:
+                url_entry.exp_time = None
+
+        db_session.add(url_entry)
+        db_session.commit()
+        db_session.refresh(url_entry)
+
+        # Invalidate/Update Redis cache
+        try:
+            from short_url_gen import redis_client
+            is_dynamic = bool(url_entry.webhook_url or url_entry.ios_url or url_entry.android_url or url_entry.password_hash or url_entry.fallback_url or url_entry.activation_time or url_entry.custom_countdown_url)
+            
+            is_expired = False
+            if url_entry.exp_time:
+                exp_utc = url_entry.exp_time.astimezone(UTC).replace(tzinfo=None) if url_entry.exp_time.tzinfo else url_entry.exp_time
+                now_utc = datetime.now(UTC).replace(tzinfo=None)
+                if exp_utc < now_utc:
+                    is_expired = True
+
+            if is_expired:
+                redis_client.set(short_url, "Expired", ex=3600)
+            elif is_dynamic:
+                redis_client.set(short_url, "DYNAMIC", ex=3600)
+            else:
+                redis_ttl = 3600
+                if url_entry.exp_time:
+                    exp_utc = url_entry.exp_time.astimezone(UTC).replace(tzinfo=None) if url_entry.exp_time.tzinfo else url_entry.exp_time
+                    now_utc = datetime.now(UTC).replace(tzinfo=None)
+                    seconds_left = int((exp_utc - now_utc).total_seconds())
+                    if seconds_left > 0:
+                        redis_ttl = min(3600, seconds_left)
+                redis_client.set(short_url, url_entry.long_url, ex=redis_ttl)
+        except Exception as e:
+            logger.warning(f"Failed to update Redis cache on edit: {e}")
+
+    return {"status": "success", "message": "Short URL updated successfully"}
 
 
 # link deletion endpoint
@@ -856,6 +1031,26 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                     raise HTTPException(status_code=503, detail="Service temporary unavailable")
                 raise HTTPException(status_code=404, detail="Short URL not found")
                 
+            # 0. Premium Scheduled Activation check
+            is_premium_owned = False
+            if url_entry.user_id:
+                user = db_session.get(User, url_entry.user_id)
+                if user and user.tier == "premium":
+                    is_premium_owned = True
+
+            if is_premium_owned and url_entry.activation_time:
+                activation_utc = url_entry.activation_time.astimezone(UTC).replace(tzinfo=None) if url_entry.activation_time.tzinfo else url_entry.activation_time
+                now_utc = datetime.now(UTC).replace(tzinfo=None)
+                if now_utc < activation_utc:
+                    if url_entry.custom_countdown_url:
+                        return RedirectResponse(url_entry.custom_countdown_url, status_code=302)
+                    else:
+                        with open(os.path.join(FRONTEND_DIR, "countdown.html"), encoding="utf-8") as f:
+                            html_content = f.read()
+                        activation_iso = activation_utc.isoformat() + "Z"
+                        html_content = html_content.replace("window.__ACTIVATION_TIME__ = null;", f"window.__ACTIVATION_TIME__ = '{activation_iso}';")
+                        return HTMLResponse(content=html_content)
+
             # 1. Expiration check with premium fallback
             is_expired = False
             if url_entry.exp_time:
@@ -964,6 +1159,12 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             if db_user:
                 user_tier = db_user.tier
 
+    if user_tier != "premium" and (request.activation_time or request.custom_countdown_url):
+        raise HTTPException(
+            status_code=400,
+            detail="Scheduled URL activation is a premium-only feature."
+        )
+
     # Enforce limits for free/anonymous tier
     if user_tier == "free":
         if not user_id:
@@ -1045,6 +1246,16 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         ios_url = request.ios_url if user_tier == "premium" else None
         android_url = request.android_url if user_tier == "premium" else None
         fallback_url = request.fallback_url if user_tier == "premium" else None
+        
+        activation_time = None
+        if request.activation_time and user_tier == "premium":
+            try:
+                dt = datetime.fromisoformat(request.activation_time)
+                activation_time = dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid activation time format. Must be ISO datetime string.")
+                
+        custom_countdown_url = request.custom_countdown_url if user_tier == "premium" else None
 
         # SSRF Protection: Validate premium parameters if supplied
         if webhook_url and not await is_valid_url(webhook_url):
@@ -1055,6 +1266,8 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             raise HTTPException(status_code=400, detail="Invalid, insecure, or private Android redirect URL")
         if fallback_url and not await is_valid_url(fallback_url):
             raise HTTPException(status_code=400, detail="Invalid, insecure, or private fallback URL")
+        if custom_countdown_url and not await is_valid_url(custom_countdown_url):
+            raise HTTPException(status_code=400, detail="Invalid, insecure, or private custom countdown URL")
 
         password_hash = None
         if request.password and user_tier == "premium":
@@ -1066,16 +1279,20 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             short_code = add_custom_url(
                 long_url, custom_alias, user_id=user_id, exp_time=computed_exp_time,
                 webhook_url=webhook_url, ios_url=ios_url, android_url=android_url,
-                password_hash=password_hash, fallback_url=fallback_url
+                password_hash=password_hash, fallback_url=fallback_url,
+                activation_time=activation_time, custom_countdown_url=custom_countdown_url
             )
         else:
             short_code = add_url(
                 long_url, user_id=user_id, exp_time=computed_exp_time,
                 webhook_url=webhook_url, ios_url=ios_url, android_url=android_url,
-                password_hash=password_hash, fallback_url=fallback_url
+                password_hash=password_hash, fallback_url=fallback_url,
+                activation_time=activation_time, custom_countdown_url=custom_countdown_url
             )
         if not short_code:
             raise HTTPException(status_code=500, detail="if this executes, the error is in short url.")
+    except HTTPException as he:
+        raise he
     except Exception:
          raise HTTPException(status_code=500, detail="Failed to generate short URL, Possibly the short url is already in use.")
     

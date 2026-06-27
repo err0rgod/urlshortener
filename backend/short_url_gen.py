@@ -43,7 +43,9 @@ def add_url(
     ios_url: Optional[str] = None,
     android_url: Optional[str] = None,
     password_hash: Optional[str] = None,
-    fallback_url: Optional[str] = None
+    fallback_url: Optional[str] = None,
+    activation_time: Optional[datetime] = None,
+    custom_countdown_url: Optional[str] = None
 ):
     exists = is_long_url_exists(long_url, user_id=user_id)
     if exists:
@@ -65,7 +67,9 @@ def add_url(
         ios_url=ios_url,
         android_url=android_url,
         password_hash=password_hash,
-        fallback_url=fallback_url
+        fallback_url=fallback_url,
+        activation_time=activation_time,
+        custom_countdown_url=custom_countdown_url
     )
     
     # Calculate correct Redis cache TTL
@@ -79,7 +83,7 @@ def add_url(
         else:
             redis_ttl = min(3600, seconds_left)
 
-    is_dynamic = bool(webhook_url or ios_url or android_url or password_hash or fallback_url)
+    is_dynamic = bool(webhook_url or ios_url or android_url or password_hash or fallback_url or activation_time or custom_countdown_url)
 
     try:
         if is_expired:
@@ -103,7 +107,9 @@ def add_custom_url(
     ios_url: Optional[str] = None,
     android_url: Optional[str] = None,
     password_hash: Optional[str] = None,
-    fallback_url: Optional[str] = None
+    fallback_url: Optional[str] = None,
+    activation_time: Optional[datetime] = None,
+    custom_countdown_url: Optional[str] = None
 ):
     does_exists = is_alias_exists(custom_alias)
     if does_exists:
@@ -125,7 +131,9 @@ def add_custom_url(
             ios_url=ios_url,
             android_url=android_url,
             password_hash=password_hash,
-            fallback_url=fallback_url
+            fallback_url=fallback_url,
+            activation_time=activation_time,
+            custom_countdown_url=custom_countdown_url
         )
         
         # Calculate correct Redis cache TTL
@@ -139,7 +147,7 @@ def add_custom_url(
             else:
                 redis_ttl = min(3600, seconds_left)
 
-        is_dynamic = bool(webhook_url or ios_url or android_url or password_hash or fallback_url)
+        is_dynamic = bool(webhook_url or ios_url or android_url or password_hash or fallback_url or activation_time or custom_countdown_url)
 
         try:
             if is_expired:
@@ -200,7 +208,7 @@ def serve_url(short_url : str):
             return "BANNED"
             
         # Check if the URL has premium dynamic properties
-        is_dynamic = bool(url.webhook_url or url.ios_url or url.android_url or url.password_hash or url.fallback_url)
+        is_dynamic = bool(url.webhook_url or url.ios_url or url.android_url or url.password_hash or url.fallback_url or url.activation_time or url.custom_countdown_url)
         if is_dynamic:
             try:
                 redis_client.set(short_url, "DYNAMIC", ex=3600)
