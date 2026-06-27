@@ -18,6 +18,14 @@ def init_db():
     in models.py (User, urldata, clicklog) if they do not already exist.
     """
     SQLModel.metadata.create_all(engine)
+    # Drop the unique constraint on long_url if it exists to allow duplicate long_urls (e.g. for custom aliases/premium target configurations)
+    from sqlalchemy import text
+    with Session(engine) as session:
+        try:
+            session.exec(text("ALTER TABLE urldata DROP CONSTRAINT IF EXISTS urldata_long_url_key;"))
+            session.commit()
+        except Exception:
+            pass
 
 
 def add_to_db(data: urldata):
@@ -105,14 +113,22 @@ def is_long_url_exists(long_url: str, user_id: Optional[int] = None) -> Optional
         Optional[str]: The short URL code if exists, None otherwise.
     """
     with Session(engine) as session:
-        statement = select(urldata).where(urldata.long_url == long_url)
+        # Check if this user has already shortened this destination URL
+        statement = select(urldata).where(urldata.long_url == long_url).where(urldata.user_id == user_id)
         results = session.exec(statement).first()
         if results is not None:
-            if user_id and results.user_id is None:
+            return results.short_url
+            
+        # If logged in, check if there is an anonymous link we can adopt
+        if user_id:
+            statement = select(urldata).where(urldata.long_url == long_url).where(urldata.user_id == None)
+            results = session.exec(statement).first()
+            if results is not None:
                 results.user_id = user_id
                 session.add(results)
                 session.commit()
-            return results.short_url
+                return results.short_url
+                
         return None
         
 

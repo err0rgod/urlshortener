@@ -238,6 +238,8 @@ async def get_url_analytics(short_url: str, request: Request):
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid session token")
     if not user_id:
@@ -249,7 +251,7 @@ async def get_url_analytics(short_url: str, request: Request):
         url_entry = db_session.exec(statement).first()
         if not url_entry:
             raise HTTPException(status_code=404, detail="Short URL not found")
-        if url_entry.user_id != user_id:
+        if url_entry.user_id is not None and url_entry.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Check if user is premium
@@ -306,25 +308,48 @@ async def get_url_analytics(short_url: str, request: Request):
             select(func.count(clicklog.id)).where(clicklog.short_url == short_url)
         ).one()
 
-        # Premium: City-level Geolocation Breakdown
-        by_city_query = db_session.exec(
-            select(clicklog.city, func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(clicklog.city)
-            .order_by(func.count(clicklog.id).desc())
-        ).all()
-        by_city = [{"city": row[0], "clicks": row[1]} for row in by_city_query]
-
-        # Premium: Bot clicks
-        bot_clicks = db_session.exec(
-            select(func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .where(clicklog.is_bot == True)
-        ).one()
-
         # User premium state check
         user = db_session.get(User, user_id)
         is_premium = (user.tier == "premium") if user else False
+
+        by_city = []
+        bot_clicks = 0
+        recent_clicks = []
+        if is_premium:
+            # Premium: City-level Geolocation Breakdown
+            by_city_query = db_session.exec(
+                select(clicklog.city, func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(clicklog.city)
+                .order_by(func.count(clicklog.id).desc())
+            ).all()
+            by_city = [{"city": row[0], "clicks": row[1]} for row in by_city_query]
+
+            # Premium: Bot clicks
+            bot_clicks = db_session.exec(
+                select(func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .where(clicklog.is_bot == True)
+            ).one()
+
+            # Premium: 5 most recent click logs
+            recent_logs = db_session.exec(
+                select(clicklog)
+                .where(clicklog.short_url == short_url)
+                .order_by(clicklog.clicked_at.desc())
+                .limit(5)
+            ).all()
+            for log in recent_logs:
+                recent_clicks.append({
+                    "clicked_at": log.clicked_at.isoformat() if log.clicked_at else None,
+                    "ip_address": log.ip_address,
+                    "country": log.country,
+                    "city": log.city,
+                    "browser": log.browser,
+                    "device": log.device,
+                    "referer": log.referer,
+                    "is_bot": log.is_bot
+                })
 
         return {
             "short_url": url_entry.short_url,
@@ -338,6 +363,7 @@ async def get_url_analytics(short_url: str, request: Request):
             "by_referer": by_referer,
             "by_city": by_city,
             "bot_clicks": bot_clicks,
+            "recent_clicks": recent_clicks,
             "is_premium": is_premium
         }
 
@@ -371,6 +397,8 @@ async def get_recent_clicks(request: Request, limit: int = 10):
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid session token")
     if not user_id:
@@ -413,6 +441,8 @@ async def get_user_links(request: Request):
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid session token")
     if not user_id:
@@ -452,6 +482,8 @@ async def export_analytics_csv(short_url: str, request: Request):
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid session token")
     if not user_id:
@@ -463,7 +495,7 @@ async def export_analytics_csv(short_url: str, request: Request):
         url_entry = db_session.exec(statement).first()
         if not url_entry:
             raise HTTPException(status_code=404, detail="Short URL not found")
-        if url_entry.user_id != user_id:
+        if url_entry.user_id is not None and url_entry.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Verify user has premium access
@@ -552,6 +584,8 @@ async def delete_link(short_url: str, request: Request):
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid session token")
     if not user_id:
@@ -562,7 +596,7 @@ async def delete_link(short_url: str, request: Request):
         url_entry = db_session.exec(statement).first()
         if not url_entry:
             raise HTTPException(status_code=404, detail="Short URL not found")
-        if url_entry.user_id != user_id:
+        if url_entry.user_id is not None and url_entry.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Delete any associated clicklog entries first to prevent foreign key violations
@@ -648,6 +682,8 @@ async def analytics(short_url: str, request: Request):
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
     except jwt.PyJWTError:
         return RedirectResponse(url="/login")
     if not user_id:
@@ -659,7 +695,7 @@ async def analytics(short_url: str, request: Request):
         url_entry = db_session.exec(statement).first()
         if not url_entry:
             raise HTTPException(status_code=404, detail="Short URL not found")
-        if url_entry.user_id != user_id:
+        if url_entry.user_id is not None and url_entry.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Check if user is premium
@@ -723,18 +759,48 @@ async def analytics(short_url: str, request: Request):
             .group_by(clicklog.city)
             .order_by(func.count(clicklog.id).desc())
         ).all()
-        by_city = [{"city": row[0], "clicks": row[1]} for row in by_city_query]
-
-        # Premium: Bot clicks
-        bot_clicks = db_session.exec(
-            select(func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .where(clicklog.is_bot == True)
-        ).one()
-
         # User premium state check
         user = db_session.get(User, user_id)
         is_premium = (user.tier == "premium") if user else False
+
+        by_city = []
+        bot_clicks = 0
+        recent_clicks = []
+        if is_premium:
+            # Premium: City-level Geolocation Breakdown
+            by_city_query = db_session.exec(
+                select(clicklog.city, func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(clicklog.city)
+                .order_by(func.count(clicklog.id).desc())
+            ).all()
+            by_city = [{"city": row[0], "clicks": row[1]} for row in by_city_query]
+
+            # Premium: Bot clicks
+            bot_clicks = db_session.exec(
+                select(func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .where(clicklog.is_bot == True)
+            ).one()
+
+            # Premium: 5 most recent click logs
+            recent_logs = db_session.exec(
+                select(clicklog)
+                .where(clicklog.short_url == short_url)
+                .order_by(clicklog.clicked_at.desc())
+                .limit(5)
+            ).all()
+            for log in recent_logs:
+                recent_clicks.append({
+                    "clicked_at": log.clicked_at.isoformat() if log.clicked_at else None,
+                    "ip_address": log.ip_address,
+                    "country": log.country,
+                    "city": log.city,
+                    "browser": log.browser,
+                    "device": log.device,
+                    "referer": log.referer,
+                    "is_bot": log.is_bot
+                })
 
         analytics_data = {
             "short_url": url_entry.short_url,
@@ -748,6 +814,7 @@ async def analytics(short_url: str, request: Request):
             "by_referer": by_referer,
             "by_city": by_city,
             "bot_clicks": bot_clicks,
+            "recent_clicks": recent_clicks,
             "is_premium": is_premium
         }
 
@@ -855,33 +922,6 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
     raise HTTPException(status_code=404, detail="Short URL not found")
 
 
-@app.post("/{short_url}")
-async def post_password_gate(short_url: str, request: Request):
-    # Parse URL encoded form parameters
-    body = await request.body()
-    from urllib.parse import parse_qs
-    params = parse_qs(body.decode("utf-8"))
-    submitted_pass = params.get("password", [None])[0]
-    
-    with Session(engine) as db_session:
-        statement = select(urldata).where(urldata.short_url == short_url)
-        url_entry = db_session.exec(statement).first()
-        if not url_entry:
-            raise HTTPException(status_code=404, detail="Short URL not found")
-            
-        import hashlib
-        salt = "flexurl_salt_secure_2026"
-        hashed = hashlib.sha256(((submitted_pass or "") + salt).encode('utf-8')).hexdigest()
-        
-        if hashed == url_entry.password_hash:
-            response = RedirectResponse(url=f"/{short_url}", status_code=303)
-            response.set_cookie(key=f"auth_link_{short_url}", value=hashed, max_age=3600)
-            return response
-        else:
-            return RedirectResponse(url=f"/{short_url}?error=1", status_code=303)
-
-
-
 # main url shortening feature
 @app.post("/shorten")
 async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None):
@@ -896,6 +936,12 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
                 status_code=400, 
                 detail="Custom alias must be 3-20 characters long, contain only letters, numbers, dashes or underscores, and cannot be a reserved system route."
             )
+        from database import is_alias_exists
+        if is_alias_exists(custom_alias):
+            raise HTTPException(
+                status_code=400,
+                detail="Custom alias is already in use. Please choose a different one."
+            )
         
     # Extract user_id if user is authenticated
     user_id = None
@@ -905,6 +951,8 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         try:
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
             user_id = payload.get("user_id")
+            if user_id is not None:
+                user_id = int(user_id)
         except jwt.PyJWTError:
             pass
         
@@ -1029,8 +1077,6 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         if not short_code:
             raise HTTPException(status_code=500, detail="if this executes, the error is in short url.")
     except Exception:
-        #  import traceback
-        #  traceback.print_exc()
          raise HTTPException(status_code=500, detail="Failed to generate short URL, Possibly the short url is already in use.")
     
     # Trigger Safe Browsing check in the background
@@ -1043,6 +1089,32 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
     full_short_url = f"{base_url}/{short_code}"
     
     return {"short_url": full_short_url}
+
+
+@app.post("/{short_url}")
+async def post_password_gate(short_url: str, request: Request):
+    # Parse URL encoded form parameters
+    body = await request.body()
+    from urllib.parse import parse_qs
+    params = parse_qs(body.decode("utf-8"))
+    submitted_pass = params.get("password", [None])[0]
+    
+    with Session(engine) as db_session:
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url_entry = db_session.exec(statement).first()
+        if not url_entry:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+            
+        import hashlib
+        salt = "flexurl_salt_secure_2026"
+        hashed = hashlib.sha256(((submitted_pass or "") + salt).encode('utf-8')).hexdigest()
+        
+        if hashed == url_entry.password_hash:
+            response = RedirectResponse(url=f"/{short_url}", status_code=303)
+            response.set_cookie(key=f"auth_link_{short_url}", value=hashed, max_age=3600)
+            return response
+        else:
+            return RedirectResponse(url=f"/{short_url}?error=1", status_code=303)
 
 
 

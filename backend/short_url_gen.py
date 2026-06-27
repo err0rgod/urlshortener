@@ -105,9 +105,6 @@ def add_custom_url(
     password_hash: Optional[str] = None,
     fallback_url: Optional[str] = None
 ):
-    exists = is_long_url_exists(long_url)
-    if exists:
-        return exists
     does_exists = is_alias_exists(custom_alias)
     if does_exists:
         return None

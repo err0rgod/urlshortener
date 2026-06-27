@@ -195,6 +195,40 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Premium Advanced Options -->
+                    <div id="premium-options-container" class="hidden border-t border-slate-100 dark:border-slate-800 pt-4 mt-4 space-y-4">
+                        <h4 class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Premium Settings</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500">Real-time Webhook URL</label>
+                                <input type="url" id="webhook_url" placeholder="https://your-api.com/webhook"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500">Passcode Protection (Optional)</label>
+                                <input type="password" id="password" placeholder="Access passcode"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500">iOS Redirect URL</label>
+                                <input type="url" id="ios_url" placeholder="iOS target URL"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500">Android Redirect URL</label>
+                                <input type="url" id="android_url" placeholder="Android target URL"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500">Fallback URL (Post-Expiration)</label>
+                                <input type="url" id="fallback_url" placeholder="Expired fallback URL"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                        </div>
+                    </div>
                 </form>
 
                 <div id="error" class="hidden mt-3 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs rounded-lg text-left"></div>
@@ -627,6 +661,14 @@
                                 </a>
                             `;
                         }
+                        
+                        // Reveal premium advanced options panel if premium
+                        if (currentUserTier === 'premium') {
+                            const premiumContainer = document.getElementById('premium-options-container');
+                            if (premiumContainer) {
+                                premiumContainer.classList.remove('hidden');
+                            }
+                        }
                     }
                 }
             } catch (err) {
@@ -681,6 +723,13 @@
             const custom_alias = enable_alias ? customAliasInput.value.trim() : '';
             const enable_expiry = enableExpiryCheckbox.checked;
             const exp_time = enable_expiry ? expiryHoursSelect.value : '';
+            
+            // Premium fields
+            const webhook_url = document.getElementById('webhook_url') ? document.getElementById('webhook_url').value.trim() : null;
+            const password = document.getElementById('password') ? document.getElementById('password').value : null;
+            const ios_url = document.getElementById('ios_url') ? document.getElementById('ios_url').value.trim() : null;
+            const android_url = document.getElementById('android_url') ? document.getElementById('android_url').value.trim() : null;
+            const fallback_url = document.getElementById('fallback_url') ? document.getElementById('fallback_url').value.trim() : null;
 
             try {
                 let url = '/shorten';
@@ -698,7 +747,14 @@
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ long_url })
+                    body: JSON.stringify({ 
+                        long_url,
+                        webhook_url: webhook_url || null,
+                        password: password || null,
+                        ios_url: ios_url || null,
+                        android_url: android_url || null,
+                        fallback_url: fallback_url || null
+                    })
                 });
 
                 const data = await response.json();

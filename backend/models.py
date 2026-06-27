@@ -26,7 +26,7 @@ class urldata(SQLModel, table=True):
     __tablename__ = "urldata"
 
     short_url: str = Field(primary_key=True, index=True, nullable=False, max_length=20, unique=True)  # SonyFlake base62 or custom alias
-    long_url: str = Field(nullable=False, unique=True)  # Destination URL
+    long_url: str = Field(nullable=False)  # Destination URL
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     click_count: int = Field(default=0)
     is_banned: bool = Field(default=False)  # Flagged by Google Safe Browsing API check

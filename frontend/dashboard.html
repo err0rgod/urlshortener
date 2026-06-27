@@ -129,6 +129,18 @@
             </div>
         </div>
 
+        <!-- Premium Welcome Banner -->
+        <div id="premium-banner" class="hidden bg-gradient-to-r from-amber-500 to-indigo-600 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+            <div class="relative z-10 space-y-2 text-left">
+                <span class="bg-white/20 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">Premium Active</span>
+                <h2 class="text-xl font-extrabold">Welcome to your Premium Workspace</h2>
+                <p class="text-xs text-white/90 max-w-xl">You have unlocked advanced parameters, real-time geocoding, password security, custom expiry redirects, and raw CSV analytics log downloads.</p>
+            </div>
+            <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none">
+                 <svg class="h-48 w-48 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2z"/></svg>
+            </div>
+        </div>
+
         <!-- Navigation Tabs -->
         <div class="border-b border-slate-200">
             <nav class="flex space-x-8" aria-label="Tabs">
@@ -254,22 +266,7 @@
                 </div>
             </div>
 
-            <!-- Danger Zone Card -->
-            <div class="bg-white border border-red-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 class="text-sm font-bold text-red-600 tracking-tight flex items-center gap-2">
-                    <svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    <span>Danger Zone</span>
-                </h3>
-                <p class="text-xs text-slate-500 leading-normal">
-                    Once you delete your account, there is no going back. All your shortened links and real-time click statistics will be permanently removed.
-                </p>
-                <div>
-                    <button onclick="showDeleteAccountModal()" class="bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold py-2.5 px-4 border border-red-200 rounded-lg transition-colors">
-                        Delete My Account
-                    </button>
-                </div>
             </div>
-        </div>
 
         <!-- Recent Activity Section -->
         <div id="activity-section" class="hidden space-y-6">
@@ -433,6 +430,12 @@
                         tierBadge.textContent = data.user.tier || 'free';
                         if (data.user.tier === 'premium') {
                             tierBadge.className = "bg-amber-50 text-amber-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200";
+                            
+                            // Show premium welcome banner
+                            const premiumBanner = document.getElementById('premium-banner');
+                            if (premiumBanner) {
+                                premiumBanner.classList.remove('hidden');
+                            }
                         } else {
                             tierBadge.className = "bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-indigo-200";
                         }
