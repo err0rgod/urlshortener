@@ -32,6 +32,11 @@ class urldata(SQLModel, table=True):
     is_banned: bool = Field(default=False)  # Flagged by Google Safe Browsing API check
     user_id: Optional[int] = Field(default=None, foreign_key="users.id")  # Owner identifier
     exp_time: Optional[datetime] = Field(default=None)  # Auto-expiration datetime
+    webhook_url: Optional[str] = Field(default=None)  # Premium: destination for redirection payloads
+    ios_url: Optional[str] = Field(default=None)  # Premium: targeted redirect destination for iOS users
+    android_url: Optional[str] = Field(default=None)  # Premium: targeted redirect destination for Android users
+    password_hash: Optional[str] = Field(default=None)  # Premium: secure link access password hash
+    fallback_url: Optional[str] = Field(default=None)  # Premium: fallback destination URL after expiration
 
 class clicklog(SQLModel, table=True):
     """
@@ -45,6 +50,8 @@ class clicklog(SQLModel, table=True):
     clicked_at: datetime = Field(nullable=False, default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     ip_address: str = Field(nullable=False, default="NA")
     country: str = Field(nullable=False, default="NA")
+    city: str = Field(nullable=False, default="NA")  # Premium: visitor city name
     browser: str = Field(nullable=False, default="NA")
     device: str = Field(nullable=False, default="NA")
     referer: str = Field(nullable=False, default="NA")
+    is_bot: bool = Field(default=False)  # Premium: flag to filter crawler traffic

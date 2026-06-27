@@ -35,8 +35,16 @@ def get_unique_id() -> str:
 
 from typing import Optional
 
-def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[int | datetime] = None):
-    
+def add_url(
+    long_url : str, 
+    user_id: Optional[int] = None, 
+    exp_time : Optional[int | datetime] = None,
+    webhook_url: Optional[str] = None,
+    ios_url: Optional[str] = None,
+    android_url: Optional[str] = None,
+    password_hash: Optional[str] = None,
+    fallback_url: Optional[str] = None
+):
     exists = is_long_url_exists(long_url, user_id=user_id)
     if exists:
         return exists
@@ -52,7 +60,12 @@ def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[i
         created_at=datetime.now(UTC).replace(tzinfo=None),
         click_count=0,
         user_id=user_id,
-        exp_time=db_exp_time
+        exp_time=db_exp_time,
+        webhook_url=webhook_url,
+        ios_url=ios_url,
+        android_url=android_url,
+        password_hash=password_hash,
+        fallback_url=fallback_url
     )
     
     # Calculate correct Redis cache TTL
@@ -66,9 +79,13 @@ def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[i
         else:
             redis_ttl = min(3600, seconds_left)
 
+    is_dynamic = bool(webhook_url or ios_url or android_url or password_hash or fallback_url)
+
     try:
         if is_expired:
             redis_client.set(short_url, "Expired", ex=3600)
+        elif is_dynamic:
+            redis_client.set(short_url, "DYNAMIC", ex=3600)
         else:
             redis_client.set(short_url, long_url, ex=redis_ttl)
     except Exception as re:
@@ -77,7 +94,17 @@ def add_url(long_url : str, user_id: Optional[int] = None, exp_time : Optional[i
     return short_url
 
 
-def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_time : Optional[int | datetime] = None):
+def add_custom_url(
+    long_url, 
+    custom_alias, 
+    user_id: Optional[int] = None, 
+    exp_time : Optional[int | datetime] = None,
+    webhook_url: Optional[str] = None,
+    ios_url: Optional[str] = None,
+    android_url: Optional[str] = None,
+    password_hash: Optional[str] = None,
+    fallback_url: Optional[str] = None
+):
     exists = is_long_url_exists(long_url)
     if exists:
         return exists
@@ -96,7 +123,12 @@ def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_ti
             created_at=datetime.now(UTC).replace(tzinfo=None),
             click_count=0,
             user_id=user_id,
-            exp_time=db_exp_time
+            exp_time=db_exp_time,
+            webhook_url=webhook_url,
+            ios_url=ios_url,
+            android_url=android_url,
+            password_hash=password_hash,
+            fallback_url=fallback_url
         )
         
         # Calculate correct Redis cache TTL
@@ -110,9 +142,13 @@ def add_custom_url(long_url, custom_alias, user_id: Optional[int] = None, exp_ti
             else:
                 redis_ttl = min(3600, seconds_left)
 
+        is_dynamic = bool(webhook_url or ios_url or android_url or password_hash or fallback_url)
+
         try:
             if is_expired:
                 redis_client.set(custom_alias, "Expired", ex=3600)
+            elif is_dynamic:
+                redis_client.set(custom_alias, "DYNAMIC", ex=3600)
             else:
                 redis_client.set(custom_alias, long_url, ex=redis_ttl)
         except Exception as re:
@@ -166,6 +202,15 @@ def serve_url(short_url : str):
                 logger.warning(f"Redis Offline: {re}")
             return "BANNED"
             
+        # Check if the URL has premium dynamic properties
+        is_dynamic = bool(url.webhook_url or url.ios_url or url.android_url or url.password_hash or url.fallback_url)
+        if is_dynamic:
+            try:
+                redis_client.set(short_url, "DYNAMIC", ex=3600)
+            except Exception as re:
+                logger.warning(f"Redis Offline: {re}")
+            return "DYNAMIC"
+
         # Calculate correct Redis cache TTL
         redis_ttl = 3600
         if url.exp_time:

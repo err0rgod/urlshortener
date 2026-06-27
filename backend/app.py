@@ -18,7 +18,7 @@ from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
 from models import clicklog, urldata, User
-from analytics_parser import parse_referer, parse_user_agent , get_ip_country
+from analytics_parser import parse_referer, parse_user_agent, get_ip_country, get_ip_location, check_is_bot
 from typing import Optional
 import time
 import jwt
@@ -31,6 +31,8 @@ from report_scheduler import daily_report_scheduler_loop
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 
 FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
+
+init_db() #for initialising table structure
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,8 +49,11 @@ async def lifespan(app: FastAPI):
         pass
     logger.info("Application shutdown completed.")
 
+
 app = FastAPI(lifespan=lifespan)
+
 app.include_router(auth_router)
+
 limiter = RateLimiterStore(max_tokens=60, refill_rate=60, interval=60)
 
 
@@ -88,56 +93,65 @@ async def rate_limit_middleware(request : Request, call_next):
 
 class URLRequest(BaseModel):
     long_url: str = Field(..., max_length=2048)
+    webhook_url: Optional[str] = Field(None, max_length=2048)
+    ios_url: Optional[str] = Field(None, max_length=2048)
+    android_url: Optional[str] = Field(None, max_length=2048)
+    password: Optional[str] = Field(None, max_length=255)
+    fallback_url: Optional[str] = Field(None, max_length=2048)
 
+
+# checks if the url is safe or not, if not marks them as banned in the Database & when a user visits a banned url he see's a banned url page
 async def background_safe_browsing_check(short_url: str, long_url: str):
     is_safe = await check_safe_browsing(long_url)
     if not is_safe:
         mark_url_banned(short_url)
         ban_in_cache(short_url)
 
+# serving essesntial SEO files
 @app.get("/robots.txt")
 async def robots():
     with open(os.path.join(FRONTEND_DIR, "robots.txt"), encoding="utf-8") as f:
         return Response(content=f.read(), media_type="text/plain")
-
 @app.get("/sitemap.xml")
 async def sitemap():
     with open(os.path.join(FRONTEND_DIR, "sitemap.xml"), encoding="utf-8") as f:
         return Response(content=f.read(), media_type="application/xml")
-
 @app.get("/security.txt")
 @app.get("/.well-known/security.txt")
 async def security():
     with open(os.path.join(FRONTEND_DIR, "security.txt"), encoding="utf-8") as f:
         return Response(content=f.read(), media_type="text/plain")
 
+
+# main website returns the index page
 @app.get("/", response_class=HTMLResponse)
 async def index():  
     with open(os.path.join(FRONTEND_DIR, "index.html"), encoding="utf-8") as f:
         return f.read()
 
+# essential legal files
 @app.get("/privacy", response_class=HTMLResponse)
 async def privacy():
     with open(os.path.join(FRONTEND_DIR, "privacy.html"), encoding="utf-8") as f:
         return f.read()
-
 @app.get("/terms", response_class=HTMLResponse)
 async def terms():
     with open(os.path.join(FRONTEND_DIR, "terms.html"), encoding="utf-8") as f:
         return f.read()
 
 
+# login endpoint 
 @app.get("/login", response_class=HTMLResponse)
 async def login():
     with open(os.path.join(FRONTEND_DIR, "login.html"), encoding="utf-8") as f:
         return f.read()
 
-
+# contact page for custom quotes from startups and teams
 @app.get("/contact", response_class=HTMLResponse)
 async def contact():
     with open(os.path.join(FRONTEND_DIR, "contact.html"), encoding="utf-8") as f:
         return f.read()
-
+# Quotesrequest class
 class QuoteRequest(BaseModel):
     business_name: str = Field(..., max_length=255)
     primary_contact: str = Field(..., max_length=255)
@@ -145,6 +159,7 @@ class QuoteRequest(BaseModel):
     cloud_provider: Optional[str] = Field(None, max_length=50)
     demand_desc: str = Field(..., max_length=5000)
 
+# post endpoint for sending the details to admin
 @app.post("/contact-sales")
 async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
     try:
@@ -154,20 +169,27 @@ async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to process quotation request")
 
-
+# for gathering analytics 
 async def record_analytics(short_url : str, ip_address : str, user_agent : str, referer : str):
     """
     process http metadata and push in DB"""
+    from datetime import datetime, UTC
+    import httpx
+
     browser,device = parse_user_agent(user_agent)
-    country = await get_ip_country(ip_address)
+    country, city = await get_ip_location(ip_address)
     clean_referer = parse_referer(referer)
+    is_bot = check_is_bot(user_agent)
+    
     log = clicklog(
         short_url=short_url,
         ip_address=ip_address,
         country=country,
+        city=city,
         browser=browser,
         device=device,
-        referer=clean_referer
+        referer=clean_referer,
+        is_bot=is_bot
     )
     add_clicklog(log)
     
@@ -179,9 +201,35 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
             url_entry.click_count += 1
             db_session.add(url_entry)
             db_session.commit()
+            db_session.refresh(url_entry)
+            
+            # Premium Webhook alert delivery
+            if url_entry.webhook_url and url_entry.user_id:
+                user = db_session.get(User, url_entry.user_id)
+                if user and user.tier == "premium":
+                    webhook_payload = {
+                        "short_url": url_entry.short_url,
+                        "long_url": url_entry.long_url,
+                        "clicked_at": log.clicked_at.isoformat() if log.clicked_at else datetime.now(UTC).isoformat(),
+                        "ip_address": ip_address,
+                        "country": country,
+                        "city": city,
+                        "browser": browser,
+                        "device": device,
+                        "referer": clean_referer,
+                        "is_bot": is_bot
+                    }
+                    async def send_webhook(url: str, data: dict):
+                        async with httpx.AsyncClient() as client:
+                            try:
+                                await client.post(url, json=data, timeout=5.0)
+                            except Exception as e:
+                                logger.warning(f"Failed to deliver webhook to {url}: {e}")
+                    
+                    asyncio.create_task(send_webhook(url_entry.webhook_url, webhook_payload))
 
 
-
+# analytics endpoint for specific short url only accessed by owner
 @app.get("/api/analytics/{short_url}")
 async def get_url_analytics(short_url: str, request: Request):
     token = request.cookies.get("session_token")
@@ -250,6 +298,26 @@ async def get_url_analytics(short_url: str, request: Request):
             select(func.count(clicklog.id)).where(clicklog.short_url == short_url)
         ).one()
 
+        # Premium: City-level Geolocation Breakdown
+        by_city_query = db_session.exec(
+            select(clicklog.city, func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(clicklog.city)
+            .order_by(func.count(clicklog.id).desc())
+        ).all()
+        by_city = [{"city": row[0], "clicks": row[1]} for row in by_city_query]
+
+        # Premium: Bot clicks
+        bot_clicks = db_session.exec(
+            select(func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .where(clicklog.is_bot == True)
+        ).one()
+
+        # User premium state check
+        user = db_session.get(User, user_id)
+        is_premium = (user.tier == "premium") if user else False
+
         return {
             "short_url": url_entry.short_url,
             "long_url": url_entry.long_url,
@@ -259,9 +327,13 @@ async def get_url_analytics(short_url: str, request: Request):
             "by_browser": by_browser,
             "by_device": by_device,
             "by_country": by_country,
-            "by_referer": by_referer
+            "by_referer": by_referer,
+            "by_city": by_city,
+            "bot_clicks": bot_clicks,
+            "is_premium": is_premium
         }
 
+# dashboard endpoint for users who have account auth required
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     token = request.cookies.get("session_token")
@@ -278,6 +350,8 @@ async def dashboard(request: Request):
     with open(os.path.join(FRONTEND_DIR, "dashboard.html"), encoding="utf-8") as f:
         return f.read()
 
+
+# gives users recent clicks auth required
 @app.get("/api/user/recent-clicks")
 async def get_recent_clicks(request: Request, limit: int = 10):
     token = request.cookies.get("session_token")
@@ -319,6 +393,7 @@ async def get_recent_clicks(request: Request, limit: int = 10):
             })
         return result
 
+# lists all the links of the user auth required
 @app.get("/api/user/links")
 async def get_user_links(request: Request):
     token = request.cookies.get("session_token")
@@ -344,10 +419,112 @@ async def get_user_links(request: Request):
                 "created_at": link.created_at.isoformat() if link.created_at else None,
                 "click_count": link.click_count,
                 "is_banned": link.is_banned,
-                "exp_time": link.exp_time.isoformat() if link.exp_time else None
+                "exp_time": link.exp_time.isoformat() if link.exp_time else None,
+                "webhook_url": link.webhook_url,
+                "ios_url": link.ios_url,
+                "android_url": link.android_url,
+                "fallback_url": link.fallback_url,
+                "has_password": bool(link.password_hash)
             })
         return result
 
+# export url analytics
+@app.get("/api/analytics/{short_url}/export")
+async def export_analytics_csv(short_url: str, request: Request):
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+    
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    with Session(engine) as db_session:
+        # Check if URL exists and user owns it
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url_entry = db_session.exec(statement).first()
+        if not url_entry:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+        if url_entry.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        # Verify user has premium access
+        user = db_session.get(User, user_id)
+        if not user or user.tier != "premium":
+            raise HTTPException(status_code=403, detail="CSV export is a Premium feature")
+
+        # Fetch click log entries sorted by click date
+        statement = select(clicklog).where(clicklog.short_url == short_url).order_by(clicklog.clicked_at.desc())
+        logs = db_session.exec(statement).all()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Header row
+        writer.writerow([
+            "Clicked At (UTC)", 
+            "IP Address", 
+            "Country", 
+            "City", 
+            "Browser", 
+            "Device", 
+            "Referer", 
+            "Is Bot"
+        ])
+        
+        for log in logs:
+            writer.writerow([
+                log.clicked_at.isoformat() if log.clicked_at else "NA",
+                log.ip_address,
+                log.country,
+                log.city,
+                log.browser,
+                log.device,
+                log.referer,
+                "Yes" if log.is_bot else "No"
+            ])
+            
+        output.seek(0)
+        return StreamingResponse(
+            io.StringIO(output.getvalue()), 
+            media_type="text/csv", 
+            headers={"Content-Disposition": f"attachment; filename={short_url}_analytics.csv"}
+        )
+
+@app.post("/api/user/toggle-tier")
+async def toggle_user_tier(request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    with Session(engine) as db_session:
+        user = db_session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Toggle tier
+        user.tier = "premium" if user.tier == "free" else "free"
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+        return {"status": "success", "tier": user.tier}
+
+
+# link deletion endpoint
 @app.delete("/api/links/{short_url}")
 async def delete_link(short_url: str, request: Request):
     token = request.cookies.get("session_token")
@@ -388,6 +565,7 @@ async def delete_link(short_url: str, request: Request):
 
         return {"status": "success", "message": "Link deleted successfully"}
 
+# user account deletion endpoint
 @app.delete("/api/user/account")
 async def delete_user_account(request: Request):
     token = request.cookies.get("session_token")
@@ -441,6 +619,7 @@ async def delete_user_account(request: Request):
     response = JSONResponse(content={"status": "success", "message": "Account deleted successfully"})
     response.delete_cookie(key="session_token")
     return response
+
 
 @app.get("/analytics/{short_url}", response_class=HTMLResponse)
 async def analytics(short_url: str, request: Request):
@@ -510,6 +689,26 @@ async def analytics(short_url: str, request: Request):
             select(func.count(clicklog.id)).where(clicklog.short_url == short_url)
         ).one()
 
+        # Premium: City-level Geolocation Breakdown
+        by_city_query = db_session.exec(
+            select(clicklog.city, func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .group_by(clicklog.city)
+            .order_by(func.count(clicklog.id).desc())
+        ).all()
+        by_city = [{"city": row[0], "clicks": row[1]} for row in by_city_query]
+
+        # Premium: Bot clicks
+        bot_clicks = db_session.exec(
+            select(func.count(clicklog.id))
+            .where(clicklog.short_url == short_url)
+            .where(clicklog.is_bot == True)
+        ).one()
+
+        # User premium state check
+        user = db_session.get(User, user_id)
+        is_premium = (user.tier == "premium") if user else False
+
         analytics_data = {
             "short_url": url_entry.short_url,
             "long_url": url_entry.long_url,
@@ -519,7 +718,10 @@ async def analytics(short_url: str, request: Request):
             "by_browser": by_browser,
             "by_device": by_device,
             "by_country": by_country,
-            "by_referer": by_referer
+            "by_referer": by_referer,
+            "by_city": by_city,
+            "bot_clicks": bot_clicks,
+            "is_premium": is_premium
         }
 
     with open(os.path.join(FRONTEND_DIR, "analytics.html"), encoding="utf-8") as f:
@@ -532,6 +734,8 @@ async def analytics(short_url: str, request: Request):
 
     return HTMLResponse(content=html_content)
 
+
+# main redirection endpoint accepts short urls and cheks if they exists or not and redirects them 
 @app.get("/{short_url}")
 async def get_short_give_long(short_url: str, request : Request, backgroud_tasks : BackgroundTasks):
     try:
@@ -547,6 +751,72 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
         with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
             return HTMLResponse(content=f.read(), status_code=410)
             
+    # Premium dynamic routing fallback check
+    if long_url == "DYNAMIC" or long_url is None:
+        from datetime import datetime, UTC
+        with Session(engine) as db_session:
+            statement = select(urldata).where(urldata.short_url == short_url)
+            url_entry = db_session.exec(statement).first()
+            if not url_entry:
+                if long_url == "DYNAMIC":
+                    raise HTTPException(status_code=503, detail="Service temporary unavailable")
+                raise HTTPException(status_code=404, detail="Short URL not found")
+                
+            # 1. Expiration check with premium fallback
+            is_expired = False
+            if url_entry.exp_time:
+                exp_utc = url_entry.exp_time.astimezone(UTC).replace(tzinfo=None) if url_entry.exp_time.tzinfo else url_entry.exp_time
+                now_utc = datetime.now(UTC).replace(tzinfo=None)
+                if exp_utc < now_utc:
+                    is_expired = True
+                    
+            if is_expired:
+                # Custom fallback redirect
+                if url_entry.fallback_url and url_entry.user_id:
+                    user = db_session.get(User, url_entry.user_id)
+                    if user and user.tier == "premium":
+                        return RedirectResponse(url_entry.fallback_url, status_code=302)
+                
+                with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
+                    return HTMLResponse(content=f.read(), status_code=410)
+                    
+            # 2. Safety ban check
+            if url_entry.is_banned:
+                with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
+                    return HTMLResponse(content=f.read(), status_code=403)
+                    
+            # 3. Password check
+            if url_entry.password_hash and url_entry.user_id:
+                user = db_session.get(User, url_entry.user_id)
+                if user and user.tier == "premium":
+                    cookie_name = f"auth_link_{short_url}"
+                    auth_cookie = request.cookies.get(cookie_name)
+                    if auth_cookie != url_entry.password_hash:
+                        with open(os.path.join(FRONTEND_DIR, "password_gate.html"), encoding="utf-8") as f:
+                            return HTMLResponse(content=f.read())
+                            
+            # 4. OS targeting
+            target_url = url_entry.long_url
+            if url_entry.user_id:
+                user = db_session.get(User, url_entry.user_id)
+                if user and user.tier == "premium":
+                    user_agent = request.headers.get("user-agent", "").lower()
+                    if "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent:
+                        if url_entry.ios_url:
+                            target_url = url_entry.ios_url
+                    elif "android" in user_agent:
+                        if url_entry.android_url:
+                            target_url = url_entry.android_url
+                            
+            # Trigger analytics
+            client_ip = request.client.host
+            user_agent = request.headers.get("user-agent", "")
+            referer = request.headers.get("referer", "Direct")
+            backgroud_tasks.add_task(
+                record_analytics, short_url, client_ip, user_agent, referer
+            )
+            return RedirectResponse(target_url, status_code=302)
+
     if long_url:
         client_ip = request.client.host
         user_agent = request.headers.get("user-agent","")
@@ -558,9 +828,34 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
     raise HTTPException(status_code=404, detail="Short URL not found")
 
 
+@app.post("/{short_url}")
+async def post_password_gate(short_url: str, request: Request):
+    # Parse URL encoded form parameters
+    body = await request.body()
+    from urllib.parse import parse_qs
+    params = parse_qs(body.decode("utf-8"))
+    submitted_pass = params.get("password", [None])[0]
+    
+    with Session(engine) as db_session:
+        statement = select(urldata).where(urldata.short_url == short_url)
+        url_entry = db_session.exec(statement).first()
+        if not url_entry:
+            raise HTTPException(status_code=404, detail="Short URL not found")
+            
+        import hashlib
+        salt = "flexurl_salt_secure_2026"
+        hashed = hashlib.sha256(((submitted_pass or "") + salt).encode('utf-8')).hexdigest()
+        
+        if hashed == url_entry.password_hash:
+            response = RedirectResponse(url=f"/{short_url}", status_code=303)
+            response.set_cookie(key=f"auth_link_{short_url}", value=hashed, max_age=3600)
+            return response
+        else:
+            return RedirectResponse(url=f"/{short_url}?error=1", status_code=303)
 
 
 
+# main url shortening feature
 @app.post("/shorten")
 async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None):
     long_url = request.long_url
@@ -596,7 +891,7 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
 
     # Enforce limits for free tier
     if user_tier == "free":
-        max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=15)
+        max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=7)
         if exp_time:
             requested_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
             computed_exp_time = min(requested_exp, max_exp)
@@ -640,10 +935,29 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             computed_exp_time = None
 
     try:
+        # Extract premium parameters if the user is premium
+        webhook_url = request.webhook_url if user_tier == "premium" else None
+        ios_url = request.ios_url if user_tier == "premium" else None
+        android_url = request.android_url if user_tier == "premium" else None
+        fallback_url = request.fallback_url if user_tier == "premium" else None
+        password_hash = None
+        if request.password and user_tier == "premium":
+            import hashlib
+            salt = "flexurl_salt_secure_2026"
+            password_hash = hashlib.sha256((request.password + salt).encode('utf-8')).hexdigest()
+
         if custom_alias:
-            short_code = add_custom_url(long_url, custom_alias, user_id=user_id, exp_time=computed_exp_time)
+            short_code = add_custom_url(
+                long_url, custom_alias, user_id=user_id, exp_time=computed_exp_time,
+                webhook_url=webhook_url, ios_url=ios_url, android_url=android_url,
+                password_hash=password_hash, fallback_url=fallback_url
+            )
         else:
-            short_code = add_url(long_url, user_id=user_id, exp_time=computed_exp_time)
+            short_code = add_url(
+                long_url, user_id=user_id, exp_time=computed_exp_time,
+                webhook_url=webhook_url, ios_url=ios_url, android_url=android_url,
+                password_hash=password_hash, fallback_url=fallback_url
+            )
         if not short_code:
             raise HTTPException(status_code=500, detail="if this executes, the error is in short url.")
     except Exception:

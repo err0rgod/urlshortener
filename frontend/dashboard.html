@@ -323,7 +323,12 @@
                             </div>
                             <div class="flex justify-between items-center text-xs">
                                 <span class="text-slate-400 font-medium">Subscription Tier</span>
-                                <span id="profile-tier-badge" class="bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Free</span>
+                                <div class="flex items-center gap-2">
+                                    <span id="profile-tier-badge" class="bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Free</span>
+                                    <button onclick="toggleSubscriptionTier()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1 px-2.5 rounded-lg text-[10px] transition-colors focus:outline-none">
+                                        Toggle Tier
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -523,6 +528,21 @@
                     statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">Expired</span>`;
                 }
 
+                // Render premium settings badges
+                let premiumBadges = '';
+                if (link.has_password) {
+                    premiumBadges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30">Password</span>`;
+                }
+                if (link.webhook_url) {
+                    premiumBadges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30">Webhook</span>`;
+                }
+                if (link.ios_url || link.android_url) {
+                    premiumBadges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-900/30">OS Targets</span>`;
+                }
+                if (link.fallback_url) {
+                    premiumBadges += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-400 border border-pink-200 dark:border-pink-900/30">Fallback</span>`;
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/50 transition-colors';
                 tr.innerHTML = `
@@ -533,6 +553,7 @@
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                             </button>
                         </div>
+                        <div class="flex flex-wrap gap-1 mt-1.5">${premiumBadges}</div>
                     </td>
                     <td class="px-6 py-4 max-w-xs truncate text-xs text-slate-500 font-medium" title="${link.long_url}">
                         <a href="${link.long_url}" target="_blank" class="hover:underline">${link.long_url}</a>
@@ -879,6 +900,29 @@
                 document.getElementById('limit-monthly-used').textContent = monthlyLinks;
                 const monthlyPercent = Math.min(100, (monthlyLinks / 100) * 100);
                 document.getElementById('limit-monthly-bar').style.width = `${monthlyPercent}%`;
+            }
+        }
+
+        // Toggle subscription tier (dev/testing utility)
+        async function toggleSubscriptionTier() {
+            try {
+                const response = await fetch('/api/user/toggle-tier', { method: 'POST' });
+                if (response.ok) {
+                    const data = await response.json();
+                    const tierBadge = document.getElementById('profile-tier-badge');
+                    tierBadge.textContent = data.tier;
+                    if (data.tier === 'premium') {
+                        tierBadge.className = "bg-amber-50 text-amber-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200";
+                    } else {
+                        tierBadge.className = "bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-indigo-200";
+                    }
+                    // Reload to reflect changes across the dashboard
+                    window.location.reload();
+                } else {
+                    showCustomAlert('Failed to toggle subscription tier.');
+                }
+            } catch (err) {
+                showCustomAlert('Connection error while toggling tier.');
             }
         }
 

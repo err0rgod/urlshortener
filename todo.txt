@@ -1,5 +1,8 @@
 read codebase 
 add more analytics
+create seprate middleware for auth 
+allow only premium users to create custom urls and limit the anonymous links to just one day and logged in users to 15 days, limit the analytics to just premium users. 
+logged in users will just see very minimal analytics like click count and also delete url and url list.
 add payment page 
 more from chatgpt history
 add optimizations from load test website 

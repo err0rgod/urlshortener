@@ -60,15 +60,44 @@ def parse_referer(referer_header : str) -> str:
         return "Direct/Email"
     
 async def get_ip_country(ip : str)-> str:
+    country, _ = await get_ip_location(ip)
+    return country
+
+async def get_ip_location(ip : str) -> tuple[str, str]:
+    """
+    Resolves client IP to country and city using ip-api.com.
+    """
     if ip in ("127.0.0.1",":1","localhost") or ip.startswith("192.168") or ip.startswith("10."):
-        return "Local/Internal"
-    url = f"https://freeapi.com/api/json/{ip}"
+        return "Local/Internal", "Local/Internal"
+    url = f"http://ip-api.com/json/{ip}"
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(url,timeout=2.0)
+            response = await client.get(url, timeout=2.0)
             if response.status_code == 200:
-                data=response.json()
-                return data.get("countryname","Unkwonw")
+                data = response.json()
+                if data.get("status") == "success":
+                    country = data.get("country", "Unknown")
+                    city = data.get("city", "Unknown")
+                    return country, city
         except:
             pass
-        return "Unknown"
+        return "Unknown", "Unknown"
+
+def check_is_bot(user_agent: str) -> bool:
+    """
+    Scans the User-Agent signature to identify bots, search scrapers, and link crawlers.
+    """
+    ua = user_agent.lower()
+    bot_signatures = [
+        "googlebot", "bingbot", "yandexbot", "ahrefsbot", "semrushbot",
+        "baiduspider", "duckduckbot", "rogerbot", "exabot", "screaming frog",
+        "facebookexternalhit", "twitterbot", "linkedinbot", "embedly",
+        "quora link preview", "showyoubot", "outbrain", "pinterest/0.",
+        "slackbot", "vkshare", "w3c_validator", "redditbot", "applebot",
+        "whatsapp", "telegrambot", "discordbot", "discord", "bot", "crawler",
+        "spider", "scrape", "headlesschrome"
+    ]
+    for signature in bot_signatures:
+        if signature in ua:
+            return True
+    return False
