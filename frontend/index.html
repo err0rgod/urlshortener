@@ -541,13 +541,11 @@
 
             </div>
         </div>
-    </section>
-
-    <!-- Pricing Section (SaaS Highlight) -->
+      <!-- Pricing Section (SaaS Highlight) -->
     <section id="pricing" class="py-20 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
-                <h2 class="text-3xl font-extrabold tracking-tight text-slate-900">
+                <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                     Pricing Plans for Teams of All Sizes
                 </h2>
                 <p class="mt-4 text-base text-slate-500 max-w-xl mx-auto">
@@ -555,62 +553,167 @@
                 </p>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch max-w-5xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch max-w-6xl mx-auto">
                 <!-- Tier 1: Free -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-900 mb-2">Developer Free</h3>
-                        <p class="text-xs text-slate-400 mb-6">Perfect for building and personal utility.</p>
-                        <div class="text-3xl font-extrabold text-slate-900 mb-6">$0<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
-                        <ul class="space-y-3.5 mb-8">
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> 10 URLs per day limit</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> 100 URLs per month limit</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> URLs expire in 15 days</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> SSRF & Safe Browsing protection</li>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Developer Free</h3>
+                        <p class="text-[11px] text-slate-400 mb-4">Perfect for building and personal utility.</p>
+                        <div class="text-2xl font-extrabold text-slate-900 mb-5">$0<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <ul class="space-y-2.5 mb-6 text-left">
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> 10 URLs per day limit</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> 100 URLs per month limit</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> URLs expire in 15 days</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> SSRF & safety checks</li>
                         </ul>
                     </div>
-                    <a href="#shorten-form" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors">
-                        Try Instant Shortening
+                    <a href="#shorten-form" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold py-2 px-3 rounded-lg text-xs transition-colors">
+                        Try Shortening
                     </a>
                 </div>
                 
-                <!-- Tier 2: Business Pro (Highlight) -->
-                <div class="bg-white dark:bg-slate-900 border-2 border-indigo-600 rounded-xl p-8 flex flex-col justify-between shadow-sm relative">
-                    <span class="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[10px] font-bold tracking-widest uppercase py-1 px-3.5 rounded-full">
+                <!-- Tier 2: Startup Choice -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Startup Choice</h3>
+                        <p class="text-[11px] text-slate-400 mb-4">For growth teams and single brands.</p>
+                        <div class="text-2xl font-extrabold text-slate-900 mb-5">$19<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <ul class="space-y-2.5 mb-6 text-left">
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Unlimited redirects</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> 1 Custom domain integration</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Extended location reports</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Premium redirect policies</li>
+                        </ul>
+                    </div>
+                    <button onclick="handleProUpgrade('startup')" class="block text-center w-full bg-slate-905 hover:bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
+                        Get Started
+                    </button>
+                </div>
+
+                <!-- Tier 3: Business Pro (Highlight) -->
+                <div class="bg-white dark:bg-slate-900 border-2 border-indigo-600 rounded-xl p-6 flex flex-col justify-between shadow-sm relative">
+                    <span class="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[9px] font-bold tracking-widest uppercase py-0.5 px-2.5 rounded-full">
                         Most Popular
                     </span>
                     <div>
-                        <h3 class="text-lg font-bold text-slate-900 mb-2">Business Pro</h3>
-                        <p class="text-xs text-slate-400 mb-6">For growing teams and brands.</p>
-                        <div class="text-3xl font-extrabold text-slate-900 mb-6">$19<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
-                        <ul class="space-y-3.5 mb-8">
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Unlimited short redirects</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Custom domain integration</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Extended location reports</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Full API Integration & SDKs</li>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Business Pro</h3>
+                        <p class="text-[11px] text-slate-400 mb-4">For larger setups and agencies.</p>
+                        <div class="text-2xl font-extrabold text-slate-900 mb-5">$49<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <ul class="space-y-2.5 mb-6 text-left">
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Unlimited redirects</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> 5 Custom domain integrations</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Dedicated location reports</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Full API integrations</li>
                         </ul>
                     </div>
-                    <button onclick="handleProUpgrade()" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="handleProUpgrade('business')" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         Get Started
                     </button>
                 </div>
                 
-                <!-- Tier 3: Enterprise Tenant -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col justify-between shadow-sm">
+                <!-- Tier 4: Enterprise Tenant -->
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm">
                     <div>
-                        <h3 class="text-lg font-bold text-slate-900 mb-2">Enterprise Dedicated</h3>
-                        <p class="text-xs text-slate-400 mb-6">Dedicated deployment on customer tenants.</p>
-                        <div class="text-3xl font-extrabold text-slate-900 mb-6">Custom</div>
-                        <ul class="space-y-3.5 mb-8">
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Single Tenant hosting (AWS/GCP)</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Custom branding & SSL termination</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> 99.99% redirection uptime SLAs</li>
-                            <li class="flex items-center text-xs text-slate-600"><span class="text-indigo-600 mr-2">✓</span> Custom DB logging adapter</li>
+                        <h3 class="text-base font-bold text-slate-900 mb-2">Enterprise Dedicated</h3>
+                        <p class="text-[11px] text-slate-400 mb-4">Dedicated deployment on customer tenants.</p>
+                        <div class="text-2xl font-extrabold text-slate-900 mb-5 font-sans">Custom</div>
+                        <ul class="space-y-2.5 mb-6 text-left">
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Dedicated cloud hosting</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> SSL termination termination</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> 99.99% redirection SLAs</li>
+                            <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Custom logging adapter</li>
                         </ul>
                     </div>
-                    <a href="/contact" class="block text-center w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
+                    <a href="/contact" class="block text-center w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
                         Contact Sales
                     </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Premium Features Explorer -->
+    <section id="premium-features-explorer" class="py-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    Unlock Premium Control Policies
+                </h2>
+                <p class="mt-4 text-base text-slate-500 max-w-xl mx-auto">
+                    Take granular control over your link redirection paths with active policies and click insights.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
+                <!-- Left: Interactive Tab Buttons -->
+                <div class="space-y-4 text-left">
+                    <div class="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-4 select-none flex items-center gap-1.5">
+                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-650 animate-ping"></span>
+                        Click a feature policy below to test preview:
+                    </div>
+
+                    <button onclick="selectFeature('schedule')" id="btn-feat-schedule" class="w-full p-4 rounded-xl border border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 text-left flex items-start gap-4 transition-all duration-300 cursor-pointer hover:border-indigo-400">
+                        <span class="p-2 rounded-lg bg-indigo-600 text-white mt-0.5">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </span>
+                        <div>
+                          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Scheduled URL Activation</h4>
+                          <p class="text-xs text-slate-500 mt-1">Specify activation date and time. Before that, visitors see a countdown or redirect page.</p>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFeature('device')" id="btn-feat-device" class="w-full p-4 rounded-xl border border-slate-205 dark:border-slate-800 text-left flex items-start gap-4 transition-all duration-300 cursor-pointer hover:border-indigo-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                        <span class="p-2 rounded-lg bg-slate-100 dark:bg-slate-855 text-slate-500 mt-0.5">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        </span>
+                        <div>
+                          <h4 class="text-sm font-bold text-slate-900 dark:text-white">OS-Aware Redirect Routing</h4>
+                          <p class="text-xs text-slate-500 mt-1">Route iOS devices to App Store, Android to Play Store, and others to fallbacks.</p>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFeature('webhook')" id="btn-feat-webhook" class="w-full p-4 rounded-xl border border-slate-205 dark:border-slate-800 text-left flex items-start gap-4 transition-all duration-300 cursor-pointer hover:border-indigo-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                        <span class="p-2 rounded-lg bg-slate-100 dark:bg-slate-855 text-slate-500 mt-0.5">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </span>
+                        <div>
+                          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Real-Time Webhook Callbacks</h4>
+                          <p class="text-xs text-slate-500 mt-1">POST click telemetry and location payloads directly to your endpoint as redirects happen.</p>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFeature('passcode')" id="btn-feat-passcode" class="w-full p-4 rounded-xl border border-slate-205 dark:border-slate-800 text-left flex items-start gap-4 transition-all duration-300 cursor-pointer hover:border-indigo-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                        <span class="p-2 rounded-lg bg-slate-100 dark:bg-slate-855 text-slate-500 mt-0.5">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </span>
+                        <div>
+                          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Passcode Verification Gate</h4>
+                          <p class="text-xs text-slate-500 mt-1">Protect target destinations behind password cookies to gate restricted documents.</p>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFeature('analytics')" id="btn-feat-analytics" class="w-full p-4 rounded-xl border border-slate-205 dark:border-slate-800 text-left flex items-start gap-4 transition-all duration-300 cursor-pointer hover:border-indigo-400 hover:bg-slate-50/50 dark:hover:bg-slate-800/20">
+                        <span class="p-2 rounded-lg bg-slate-100 dark:bg-slate-855 text-slate-500 mt-0.5">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        </span>
+                        <div>
+                          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Deep Location Analytics</h4>
+                          <p class="text-xs text-slate-500 mt-1">Obtain country location resolution and referral sources for every redirection.</p>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Right: Dynamic Interactive Preview Card -->
+                <div class="h-full flex items-center justify-center">
+                    <div id="feature-preview-container" class="w-full max-w-[440px] aspect-video sm:aspect-square bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden transition-all duration-300">
+                        <div class="space-y-4">
+                            <div class="text-3xl font-extrabold text-indigo-650" id="feat-timer-val">04m 12s</div>
+                            <p class="text-xs font-mono text-slate-500">Link remains locked until timer expires</p>
+                            <div class="w-48 h-2 bg-slate-200 rounded-full mx-auto overflow-hidden">
+                                <div class="h-full bg-indigo-600 animate-pulse" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -730,6 +833,170 @@
     </footer>
 
     <script>
+        let activeFeature = 'schedule';
+        let featureInterval = null;
+
+        function selectFeature(featureId) {
+            activeFeature = featureId;
+            const featureIds = ['schedule', 'device', 'webhook', 'passcode', 'analytics'];
+            featureIds.forEach(id => {
+                const btn = document.getElementById(`btn-feat-${id}`);
+                if (!btn) return;
+                
+                const iconSpan = btn.querySelector('span');
+                
+                if (id === featureId) {
+                    btn.className = "w-full p-4 rounded-xl border border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 text-left flex items-start gap-4 transition-all duration-300";
+                    if (iconSpan) {
+                        iconSpan.className = "p-2 rounded-lg bg-indigo-600 text-white mt-0.5";
+                    }
+                } else {
+                    btn.className = "w-full p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-left flex items-start gap-4 transition-all duration-300";
+                    if (iconSpan) {
+                        iconSpan.className = "p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 mt-0.5";
+                    }
+                }
+            });
+
+            if (featureInterval) {
+                clearInterval(featureInterval);
+                featureInterval = null;
+            }
+
+            const container = document.getElementById('feature-preview-container');
+            if (!container) return;
+
+            if (featureId === 'schedule') {
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="text-3xl font-extrabold text-indigo-650 font-mono" id="feat-timer-val">04m 12s</div>
+                        <p class="text-xs font-mono text-slate-500">Link remains locked until timer expires</p>
+                        <div class="w-48 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto overflow-hidden">
+                            <div class="h-full bg-indigo-600 animate-pulse" style="width: 75%"></div>
+                        </div>
+                    </div>
+                `;
+                let seconds = 252;
+                featureInterval = setInterval(() => {
+                    if (seconds > 0) seconds--;
+                    const m = Math.floor(seconds / 60);
+                    const s = seconds % 60;
+                    const valStr = `${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+                    const timerEl = document.getElementById('feat-timer-val');
+                    if (timerEl) timerEl.textContent = valStr;
+                }, 1000);
+            } 
+            else if (featureId === 'device') {
+                container.innerHTML = `
+                    <div class="w-full space-y-6">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Client OS Targeting Routing</span>
+                        <div class="flex items-center justify-between gap-4 max-w-sm mx-auto">
+                            <div class="flex flex-col items-center gap-1.5">
+                                <span class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                </span>
+                                <span class="text-[9px] font-bold text-slate-505 uppercase">iOS user</span>
+                            </div>
+                            <div class="flex-1 border-t-2 border-dashed border-indigo-600 relative h-2">
+                                <span class="absolute top-0 right-0 h-1.5 w-1.5 rounded-full bg-indigo-600 animate-ping"></span>
+                            </div>
+                            <div class="flex flex-col items-center gap-1.5">
+                                <span class="h-12 w-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                                    <svg class="h-5 w-5 animate-spin" style="animation-duration: 5s" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" /></svg>
+                                </span>
+                                <span class="text-[9px] font-bold text-indigo-600 uppercase">Router</span>
+                            </div>
+                            <div class="flex-1 border-t-2 border-dashed border-emerald-500 relative h-2">
+                                <span class="absolute top-0 right-0 h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            </div>
+                            <div class="flex flex-col items-center gap-1.5">
+                                <span class="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-250 flex items-center justify-center font-bold text-xs">
+                                    Store
+                                </span>
+                                <span class="text-[9px] font-bold text-emerald-600 uppercase">App store</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-202 dark:border-slate-800 text-[10px] font-mono text-slate-500 truncate">
+                            Redirect URL: https://apps.apple.com/app/flexurl
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (featureId === 'webhook') {
+                container.innerHTML = `
+                    <div class="w-full text-left space-y-3">
+                        <span class="text-[10px] font-bold text-slate-450 uppercase tracking-widest block text-center">Payload Event sync on Redirect</span>
+                        <pre class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl p-3 text-[10px] font-mono text-slate-650 dark:text-slate-300 overflow-x-auto leading-relaxed max-w-sm mx-auto">{
+  "event": "link.redirect",
+  "short_code": "x8a2f",
+  "visitor": {
+    "ip_country": "US",
+    "device_type": "mobile",
+    "client_os": "iOS",
+    "referer": "https://t.co/"
+  }
+}</pre>
+                    </div>
+                `;
+            } 
+            else if (featureId === 'passcode') {
+                container.innerHTML = `
+                    <div class="w-full space-y-4 max-w-xs mx-auto">
+                        <div class="h-10 w-10 rounded-full bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center border border-amber-250">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </div>
+                        <div class="space-y-1.5">
+                            <h4 class="text-xs font-bold text-slate-850 dark:text-white">Passcode Required</h4>
+                            <p class="text-[10px] text-slate-550 leading-tight">Enter password credentials to access redirect landing target.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <input type="password" readonly value="******" class="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-500 outline-none" />
+                            <button onclick="alert('Demo: Verified successfully!')" class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold transition-colors">Submit</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (featureId === 'analytics') {
+                container.innerHTML = `
+                    <div class="w-full space-y-4 text-left">
+                        <span class="text-[10px] font-bold text-slate-450 uppercase tracking-widest block text-center mb-1">Redirection clicks by location</span>
+                        <div class="space-y-2.5 max-w-xs mx-auto">
+                            <div>
+                                <div class="flex justify-between text-[10px] font-bold">
+                                    <span>United States</span>
+                                    <span class="text-slate-500">43%</span>
+                                </div>
+                                <div class="w-full h-1 bg-slate-200 dark:bg-slate-850 rounded-full mt-1 overflow-hidden">
+                                    <div class="h-full bg-indigo-600" style="width: 43%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] font-bold">
+                                    <span>United Kingdom</span>
+                                    <span class="text-slate-500">21%</span>
+                                </div>
+                                <div class="w-full h-1 bg-slate-200 dark:bg-slate-850 rounded-full mt-1 overflow-hidden">
+                                    <div class="h-full bg-indigo-600" style="width: 21%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] font-bold">
+                                    <span>Germany</span>
+                                    <span class="text-slate-500">12%</span>
+                                </div>
+                                <div class="w-full h-1 bg-slate-200 dark:bg-slate-850 rounded-full mt-1 overflow-hidden">
+                                    <div class="h-full bg-indigo-600" style="width: 12%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize features explorer
+        setTimeout(() => selectFeature('schedule'), 100);
+
         async function handleProUpgrade(plan = 'startup') {
             try {
                 const response = await fetch('/auth/me');
