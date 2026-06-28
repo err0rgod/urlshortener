@@ -63,12 +63,22 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router)
 
+def get_client_ip(request: Request) -> str:
+    cf_ip = request.headers.get("cf-connecting-ip")
+    if cf_ip:
+        return cf_ip
+    x_forwarded = request.headers.get("x-forwarded-for")
+    if x_forwarded:
+        return x_forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
 limiter = RateLimiterStore(max_tokens=60, refill_rate=60, interval=60)
 
 
 @app.middleware("http")
 async def rate_limit_middleware(request : Request, call_next):
-    client_ip = request.client.host
+    client_ip = get_client_ip(request)
     bucket = limiter.get_bucket(client_ip)
     if not bucket.allow_request():
         retry_after = bucket.get_reset_time()- time.time()
@@ -1429,7 +1439,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                             target_url = url_entry.android_url
                             
             # Trigger analytics
-            client_ip = request.client.host
+            client_ip = get_client_ip(request)
             user_agent = request.headers.get("user-agent", "")
             referer = request.headers.get("referer", "Direct")
             backgroud_tasks.add_task(
@@ -1438,7 +1448,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             return RedirectResponse(target_url, status_code=302)
 
     if long_url:
-        client_ip = request.client.host
+        client_ip = get_client_ip(request)
         user_agent = request.headers.get("user-agent","")
         referer = request.headers.get("referer","Direct")
         backgroud_tasks.add_task(
