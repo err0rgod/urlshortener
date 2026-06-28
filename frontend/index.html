@@ -633,7 +633,10 @@
                 </div>
                 
                 <!-- Tier 2: Startup Choice -->
-                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm">
+                <div class="bg-white dark:bg-slate-900 border-2 border-indigo-600 rounded-xl p-6 flex flex-col justify-between shadow-sm relative">
+                    <span class="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[9px] font-bold tracking-widest uppercase py-0.5 px-2.5 rounded-full">
+                        Most Popular
+                    </span>
                     <div>
                         <h3 class="text-base font-bold text-slate-900 mb-2">Startup Choice</h3>
                         <p class="text-[11px] text-slate-400 mb-4">For growth teams and single brands.</p>
@@ -645,16 +648,13 @@
                             <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Premium redirect policies</li>
                         </ul>
                     </div>
-                    <button onclick="handleProUpgrade('startup')" class="block text-center w-full bg-slate-905 hover:bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
+                    <button onclick="handleProUpgrade('startup')" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         Get Started
                     </button>
                 </div>
 
                 <!-- Tier 3: Business Pro (Highlight) -->
-                <div class="bg-white dark:bg-slate-900 border-2 border-indigo-600 rounded-xl p-6 flex flex-col justify-between shadow-sm relative">
-                    <span class="absolute top-0 right-1/2 translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white text-[9px] font-bold tracking-widest uppercase py-0.5 px-2.5 rounded-full">
-                        Most Popular
-                    </span>
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 flex flex-col justify-between shadow-sm">
                     <div>
                         <h3 class="text-base font-bold text-slate-900 mb-2">Business Pro</h3>
                         <p class="text-[11px] text-slate-400 mb-4">For larger setups and agencies.</p>
@@ -666,7 +666,7 @@
                             <li class="flex items-center text-[11px] text-slate-655"><span class="text-indigo-600 mr-1.5">✓</span> Full API integrations</li>
                         </ul>
                     </div>
-                    <button onclick="handleProUpgrade('business')" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button onclick="handleProUpgrade('business')" class="block text-center w-full bg-slate-905 hover:bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500">
                         Get Started
                     </button>
                 </div>
@@ -786,7 +786,7 @@
                 <span class="h-1.5 w-1.5 rounded-full bg-[#1A3FE0] ring-2 ring-indigo-500/30"></span>
                 The Choice
             </span>
-            <h2 class="font-tight mt-4 text-[clamp(2rem,5vw,3.4rem)] font-bold leading-[1.02] text-slate-900 dark:text-white">Which creator are you?</h2>
+            <h2 class="font-tight mt-4 text-[clamp(2rem,5vw,3.4rem)] font-bold leading-[1.02] text-slate-900 dark:text-white">Which founder are you?</h2>
         </div>
         <div class="grid grid-cols-1 gap-5 md:grid-cols-2 text-left">
             <!-- Left Card: WITHOUT FlexURL -->
