@@ -281,6 +281,11 @@
                                     <input type="url" id="custom_countdown_url" placeholder="https://example.com/countdown"
                                         class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
                                 </div>
+                            <div id="domain-select-wrapper" class="hidden flex flex-col gap-1.5 pt-2">
+                                <label class="text-[10px] font-bold text-slate-500">Short Link Domain</label>
+                                <select id="shortener_domain" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                                    <option value="flexurl.app">flexurl.app (Default)</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -1136,10 +1141,49 @@
                         
                         // Reveal premium advanced options panel if premium
                         const currentUserTier = data.user.tier;
-                        if (currentUserTier === 'premium') {
+                        const isPremium = ['premium', 'startup', 'business'].includes(currentUserTier);
+                        if (isPremium) {
                             const premiumWrapper = document.getElementById('premium-wrapper');
                             if (premiumWrapper) {
                                 premiumWrapper.classList.remove('hidden');
+                            }
+
+                            // Fetch verified custom domains
+                            try {
+                                const domResp = await fetch('/api/domains');
+                                if (domResp.ok) {
+                                    const domains = await domResp.json();
+                                    const verifiedDomains = domains.filter(d => d.is_verified);
+                                    if (verifiedDomains.length > 0) {
+                                        const domainSelectWrapper = document.getElementById('domain-select-wrapper');
+                                        const selectEl = document.getElementById('shortener_domain');
+                                        if (domainSelectWrapper && selectEl) {
+                                            domainSelectWrapper.classList.remove('hidden');
+                                            selectEl.innerHTML = '';
+
+                                            if (verifiedDomains.length === 1) {
+                                                const opt = document.createElement('option');
+                                                opt.value = verifiedDomains[0].domain_name;
+                                                opt.textContent = verifiedDomains[0].domain_name;
+                                                selectEl.appendChild(opt);
+                                            } else {
+                                                const defaultOpt = document.createElement('option');
+                                                defaultOpt.value = 'flexurl.app';
+                                                defaultOpt.textContent = 'flexurl.app (Default)';
+                                                selectEl.appendChild(defaultOpt);
+
+                                                verifiedDomains.forEach(dom => {
+                                                    const opt = document.createElement('option');
+                                                    opt.value = dom.domain_name;
+                                                    opt.textContent = dom.domain_name;
+                                                    selectEl.appendChild(opt);
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                console.error("Failed to load domains:", err);
                             }
                         }
                     }
@@ -1264,10 +1308,14 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    shortUrlInput.value = data.short_url;
+                    const selectEl = document.getElementById('shortener_domain');
+                    const selectedDomain = selectEl && selectEl.value ? selectEl.value : window.location.host;
                     
                     const urlParts = data.short_url.split('/');
                     const shortCode = urlParts[urlParts.length - 1];
+                    const finalShortUrl = `${window.location.protocol}//${selectedDomain}/${shortCode}`;
+                    shortUrlInput.value = finalShortUrl;
+                    
                     const analyticsLink = document.getElementById('analytics-link');
                     if (analyticsLink) {
                         analyticsLink.href = `/analytics/${shortCode}`;

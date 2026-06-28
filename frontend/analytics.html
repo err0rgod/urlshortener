@@ -375,6 +375,18 @@
                     data = await response.json();
                 }
 
+                if (data && !data.is_premium) {
+                    document.getElementById('error-message').textContent = 'Analytics are a premium feature. Please upgrade your subscription.';
+                    const btn = document.querySelector('#error-state a');
+                    if (btn) {
+                        btn.textContent = 'Upgrade to Premium';
+                        btn.href = '/dashboard';
+                    }
+                    document.getElementById('loading-state').classList.add('hidden');
+                    document.getElementById('error-state').classList.remove('hidden');
+                    return;
+                }
+
                 window.analyticsData = data;
                 renderDashboard(data, botToggle.checked);
 

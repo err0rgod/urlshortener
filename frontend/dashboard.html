@@ -599,7 +599,8 @@
                         }
                         
                         const params = new URLSearchParams(window.location.search);
-                        if (params.get('upgrade') === '1' && data.user.tier !== 'premium') {
+                        const hasPremiumTier = ['premium', 'startup', 'business'].includes(data.user.tier);
+                        if (params.get('upgrade') === '1' && !hasPremiumTier) {
                             const plan = params.get('plan') || 'startup';
                             const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
                             window.history.replaceState({path: cleanUrl}, '', cleanUrl);
@@ -693,7 +694,8 @@
                 }
 
                 let analyticsOption = '';
-                if (userDetails && userDetails.tier === 'premium') {
+                const isPremium = userDetails && ['premium', 'startup', 'business'].includes(userDetails.tier);
+                if (isPremium) {
                     analyticsOption = `<a href="/analytics/${link.short_url}" class="text-indigo-600 hover:text-indigo-800 transition-colors">Analytics</a>`;
                 } else {
                     analyticsOption = `
@@ -731,7 +733,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-xs font-semibold space-x-2">
                         ${analyticsOption}
-                        ${userDetails && userDetails.tier === 'premium' ? `<button onclick="openEditModal('${link.short_url}')" class="text-indigo-600 hover:text-indigo-800 transition-colors">Edit</button>` : ''}
+                        ${isPremium ? `<button onclick="openEditModal('${link.short_url}')" class="text-indigo-600 hover:text-indigo-800 transition-colors">Edit</button>` : ''}
                         <button onclick="confirmDeleteLink('${link.short_url}')" class="text-rose-600 hover:text-rose-800 transition-colors">Delete</button>
                     </td>
                 `;
@@ -1347,11 +1349,12 @@
 
         // Delete connected custom domain
         async function deleteDomain(domainId) {
-            showConfirmationModal({
+            showConfirmModal({
                 title: 'Remove Custom Domain',
                 message: 'Are you sure you want to remove this custom domain? Active shortened links pointing to this custom domain will stop redirecting properly.',
-                confirmText: 'Remove',
-                confirmStyle: 'danger',
+                iconType: 'danger',
+                confirmText: 'Remove Domain',
+                confirmClass: 'bg-red-600 hover:bg-red-700',
                 onConfirm: async () => {
                     try {
                         const response = await fetch(`/api/domains/${domainId}`, {

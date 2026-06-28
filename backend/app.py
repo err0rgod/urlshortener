@@ -830,6 +830,7 @@ async def export_analytics_csv(short_url: str, request: Request):
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Verify user has premium access
+        user = db_session.get(User, user_id)
         if not user or user.tier not in ("premium", "startup", "business"):
             raise HTTPException(status_code=403, detail="CSV export is a Premium feature")
 
@@ -1181,65 +1182,63 @@ async def analytics(short_url: str, request: Request):
 
         # Check if user is premium
         user = db_session.get(User, user_id)
-        if not user or user.tier not in ("premium", "startup", "business"):
-            raise HTTPException(
-                status_code=403, 
-                detail="Analytics are a premium feature. Please upgrade your subscription."
-            )
+        is_premium = (user.tier in ("premium", "startup", "business")) if user else False
 
-        # Clicks by date
-        by_date_query = db_session.exec(
-            select(func.date(clicklog.clicked_at), func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(func.date(clicklog.clicked_at))
-            .order_by(func.date(clicklog.clicked_at))
-        ).all()
-        by_date = [{"date": str(row[0]), "clicks": row[1]} for row in by_date_query]
+        by_date = []
+        by_browser = []
+        by_device = []
+        by_country = []
+        by_referer = []
+        total_clicks = 0
 
-        # Clicks by browser
-        by_browser_query = db_session.exec(
-            select(clicklog.browser, func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(clicklog.browser)
-        ).all()
-        by_browser = [{"browser": row[0], "clicks": row[1]} for row in by_browser_query]
+        if is_premium:
+            # Clicks by date
+            by_date_query = db_session.exec(
+                select(func.date(clicklog.clicked_at), func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(func.date(clicklog.clicked_at))
+                .order_by(func.date(clicklog.clicked_at))
+            ).all()
+            by_date = [{"date": str(row[0]), "clicks": row[1]} for row in by_date_query]
 
-        # Clicks by device
-        by_device_query = db_session.exec(
-            select(clicklog.device, func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(clicklog.device)
-        ).all()
-        by_device = [{"device": row[0], "clicks": row[1]} for row in by_device_query]
+            # Clicks by browser
+            by_browser_query = db_session.exec(
+                select(clicklog.browser, func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(clicklog.browser)
+            ).all()
+            by_browser = [{"browser": row[0], "clicks": row[1]} for row in by_browser_query]
 
-        # Clicks by country
-        by_country_query = db_session.exec(
-            select(clicklog.country, func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(clicklog.country)
-        ).all()
-        by_country = [{"country": row[0], "clicks": row[1]} for row in by_country_query]
+            # Clicks by device
+            by_device_query = db_session.exec(
+                select(clicklog.device, func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(clicklog.device)
+            ).all()
+            by_device = [{"device": row[0], "clicks": row[1]} for row in by_device_query]
 
-        # Clicks by referrer
-        by_referer_query = db_session.exec(
-            select(clicklog.referer, func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(clicklog.referer)
-        ).all()
-        by_referer = [{"referer": row[0], "clicks": row[1]} for row in by_referer_query]
+            # Clicks by country
+            by_country_query = db_session.exec(
+                select(clicklog.country, func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(clicklog.country)
+            ).all()
+            by_country = [{"country": row[0], "clicks": row[1]} for row in by_country_query]
 
-        # Total clicks
-        total_clicks = db_session.exec(
-            select(func.count(clicklog.id)).where(clicklog.short_url == short_url)
-        ).one()
+            # Clicks by referrer
+            by_referer_query = db_session.exec(
+                select(clicklog.referer, func.count(clicklog.id))
+                .where(clicklog.short_url == short_url)
+                .group_by(clicklog.referer)
+            ).all()
+            by_referer = [{"referer": row[0], "clicks": row[1]} for row in by_referer_query]
 
-        # Premium: City-level Geolocation Breakdown
-        by_city_query = db_session.exec(
-            select(clicklog.city, func.count(clicklog.id))
-            .where(clicklog.short_url == short_url)
-            .group_by(clicklog.city)
-            .order_by(func.count(clicklog.id).desc())
-        ).all()
+            # Total clicks
+            total_clicks = db_session.exec(
+                select(func.count(clicklog.id)).where(clicklog.short_url == short_url)
+            ).one()
+
+
         # User premium state check
         is_premium = (user.tier in ("premium", "startup", "business")) if user else False
 
