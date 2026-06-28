@@ -329,10 +329,10 @@
                             </div>
                             <div id="upgrade-button-container" class="mt-4 pt-4 border-t border-slate-150 hidden space-y-2">
                                 <button onclick="startUpgrade('startup')" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
-                                    Startup Choice (Rs 1500)
+                                    Startup Choice ($19)
                                 </button>
                                 <button onclick="startUpgrade('business')" class="w-full py-2 px-4 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
-                                    Business Pro (Rs 3900)
+                                    Business Pro ($49)
                                 </button>
                             </div>
                         </div>
@@ -412,7 +412,7 @@
                             Add Domain
                         </button>
                     </form>
-                    <p id="domains-error" class="hidden text-xs text-red-655"></p>
+                    <p id="domains-error" class="hidden text-xs text-red-600"></p>
 
                     <!-- Connected Domains List -->
                     <div class="space-y-3">
@@ -991,6 +991,44 @@
             });
         }
 
+        let domainPollInterval = null;
+
+        function startDomainPolling() {
+            stopDomainPolling();
+            domainPollInterval = setInterval(async () => {
+                const activeTab = document.getElementById('tab-domains-btn');
+                if (activeTab && activeTab.classList.contains('border-indigo-600')) {
+                    const pendingDomains = userDomains.filter(d => !d.is_verified);
+                    if (pendingDomains.length > 0) {
+                        let verifiedAny = false;
+                        for (const dom of pendingDomains) {
+                            try {
+                                const response = await fetch(`/api/domains/${dom.id}/verify`, { method: 'POST' });
+                                if (response.ok) {
+                                    const res = await response.json();
+                                    if (res.is_verified) {
+                                        verifiedAny = true;
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+                        if (verifiedAny) {
+                            await fetchAndRenderDomains();
+                        }
+                    }
+                } else {
+                    stopDomainPolling();
+                }
+            }, 8000); // Poll every 8 seconds
+        }
+
+        function stopDomainPolling() {
+            if (domainPollInterval) {
+                clearInterval(domainPollInterval);
+                domainPollInterval = null;
+            }
+        }
+
         // Switch tab
         function switchTab(tab) {
             const tabs = ['links', 'activity', 'profile', 'domains'];
@@ -1007,11 +1045,16 @@
             });
 
             if (tab === 'activity') {
+                stopDomainPolling();
                 fetchRecentClicks();
             } else if (tab === 'profile') {
+                stopDomainPolling();
                 updateProfileLimits();
             } else if (tab === 'domains') {
                 fetchAndRenderDomains();
+                startDomainPolling();
+            } else {
+                stopDomainPolling();
             }
         }
 
@@ -1228,23 +1271,77 @@
 
                     userDomains.forEach(dom => {
                         const row = document.createElement('div');
-                        row.className = "flex items-center justify-between p-3 border border-slate-150 rounded-xl bg-slate-50/30 text-xs";
-                        row.innerHTML = `
-                            <div class="flex items-center gap-2">
-                                <span class="font-semibold text-slate-800">${dom.domain_name}</span>
-                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${dom.is_verified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
-                                    ${dom.is_verified ? 'Verified' : 'Pending'}
-                                </span>
-                            </div>
-                            <button onclick="deleteDomain(${dom.id})" class="text-xs text-red-600 hover:text-red-750 font-semibold cursor-pointer">
-                                Remove
-                            </button>
-                        `;
+                        if (dom.is_verified) {
+                            row.className = "flex items-center justify-between p-4 border border-slate-150 rounded-xl bg-slate-50/30 text-xs";
+                            row.innerHTML = `
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-slate-800">${dom.domain_name}</span>
+                                    <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        Verified
+                                    </span>
+                                </div>
+                                <button onclick="deleteDomain(${dom.id})" class="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer">
+                                    Remove
+                                </button>
+                            `;
+                        } else {
+                            const parts = dom.domain_name.split('.');
+                            const isSubdomain = parts.length > 2;
+                            const type = isSubdomain ? 'CNAME' : 'CNAME / ALIAS';
+                            const hostName = isSubdomain ? parts[0] : '@';
+                            const pointsTo = 'flexurl.app';
+
+                            row.className = "flex flex-col gap-3 p-4 border border-slate-150 rounded-xl bg-slate-50/30 text-xs";
+                            row.innerHTML = `
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-semibold text-slate-800">${dom.domain_name}</span>
+                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                                            Pending DNS Setup
+                                        </span>
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <button onclick="verifyDomain(${dom.id})" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">
+                                            Verify DNS
+                                        </button>
+                                        <button onclick="deleteDomain(${dom.id})" class="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer">
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg space-y-2 text-[11px] text-slate-500 leading-normal">
+                                    <p class="font-semibold text-slate-700 dark:text-slate-300">To verify your domain, add the following DNS record in your provider (e.g. Cloudflare):</p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono bg-slate-50 dark:bg-slate-900 p-2.5 rounded border border-slate-100 dark:border-slate-800">
+                                        <div><strong>Type:</strong> <span class="text-indigo-600 dark:text-indigo-400">${type}</span></div>
+                                        <div><strong>Host:</strong> <span class="text-indigo-600 dark:text-indigo-400">${hostName}</span></div>
+                                        <div><strong>Points to:</strong> <span class="text-indigo-600 dark:text-indigo-400">${pointsTo}</span></div>
+                                    </div>
+                                </div>
+                            `;
+                        }
                         listEl.appendChild(row);
                     });
                 }
             } catch (err) {
                 console.error(err);
+            }
+        }
+
+        // Trigger manual/ajax domain verification check
+        async function verifyDomain(domainId) {
+            try {
+                const response = await fetch(`/api/domains/${domainId}/verify`, {
+                    method: 'POST'
+                });
+                const res = await response.json();
+                if (response.ok) {
+                    showCustomAlert(res.message);
+                    await fetchAndRenderDomains();
+                } else {
+                    showCustomAlert(res.detail || 'Failed to verify domain');
+                }
+            } catch (err) {
+                showCustomAlert('Verification request failed. Please check your connection.');
             }
         }
 
@@ -1375,7 +1472,11 @@
                             await fetchAndRenderDomains();
                         } else {
                             const err = await response.json();
-                            errorEl.textContent = err.detail || 'Failed to add custom domain';
+                            let errMsg = err.detail || 'Failed to add custom domain';
+                            if (userDetails && userDetails.tier === 'startup' && userDomains.length >= 1) {
+                                errMsg = "You have reached your 1 custom domain limit for the Startup Choice plan. Please upgrade to Business Pro to add more custom domains.";
+                            }
+                            errorEl.textContent = errMsg;
                             errorEl.classList.remove('hidden');
                         }
                     } catch (err) {

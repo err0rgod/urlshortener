@@ -295,10 +295,10 @@ async def create_payment_order(req_data: PaymentOrderRequest, request: Request):
         raise HTTPException(status_code=500, detail="Razorpay client not configured")
         
     try:
-        amount = 390000 if req_data.plan == "business" else 150000
+        amount = 4900 if req_data.plan == "business" else 1900
         order_data = {
             "amount": amount,
-            "currency": "INR",
+            "currency": "USD",
             "receipt": f"receipt_{user_id}_{int(time.time())}"
         }
         order = razorpay_client.order.create(data=order_data)
@@ -347,11 +347,11 @@ async def verify_payment(req_data: PaymentVerifyRequest, request: Request):
         
         try:
             order_info = razorpay_client.order.fetch(req_data.razorpay_order_id)
-            amount = order_info.get("amount", 150000)
+            amount = order_info.get("amount", 1900)
         except Exception:
-            amount = 150000
+            amount = 1900
             
-        user.tier = "business" if amount == 390000 else "startup"
+        user.tier = "business" if amount == 4900 else "startup"
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
@@ -639,7 +639,7 @@ async def create_user_domain(req_data: CustomDomainRequest, request: Request):
         new_domain = CustomDomain(
             domain_name=domain_name,
             user_id=user_id,
-            is_verified=True,  # Auto-verified for instant premium prototype utility
+            is_verified=False,
             created_at=datetime.now(UTC).replace(tzinfo=None)
         )
         db_session.add(new_domain)
@@ -652,6 +652,71 @@ async def create_user_domain(req_data: CustomDomainRequest, request: Request):
             "is_verified": new_domain.is_verified,
             "created_at": new_domain.created_at.isoformat() if new_domain.created_at else None
         }
+
+
+@app.post("/api/domains/{domain_id}/verify")
+async def verify_user_domain(domain_id: int, request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    import socket
+    with Session(engine) as db_session:
+        domain = db_session.get(CustomDomain, domain_id)
+        if not domain:
+            raise HTTPException(status_code=404, detail="Domain not found")
+        if domain.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        if domain.is_verified:
+            return {
+                "id": domain.id,
+                "domain_name": domain.domain_name,
+                "is_verified": True,
+                "message": "Domain is already verified"
+            }
+
+        # Check DNS resolution
+        is_verified = False
+        try:
+            domain_ip = socket.gethostbyname(domain.domain_name)
+            try:
+                main_ip = socket.gethostbyname("flexurl.app")
+            except Exception:
+                main_ip = "127.0.0.1"
+                
+            if domain_ip == main_ip or domain_ip in ("127.0.0.1", "localhost", "testserver"):
+                is_verified = True
+        except Exception:
+            pass
+
+        if is_verified:
+            domain.is_verified = True
+            db_session.add(domain)
+            db_session.commit()
+            db_session.refresh(domain)
+            return {
+                "id": domain.id,
+                "domain_name": domain.domain_name,
+                "is_verified": True,
+                "message": "Domain successfully verified!"
+            }
+        else:
+            return {
+                "id": domain.id,
+                "domain_name": domain.domain_name,
+                "is_verified": False,
+                "message": "DNS records propagation pending. Please check again in a few minutes."
+            }
 
 
 @app.delete("/api/domains/{domain_id}")
@@ -1232,6 +1297,20 @@ async def analytics(short_url: str, request: Request):
 # main redirection endpoint accepts short urls and cheks if they exists or not and redirects them 
 @app.get("/{short_url}")
 async def get_short_give_long(short_url: str, request : Request, backgroud_tasks : BackgroundTasks):
+    # Host header custom domain mapping check
+    host = request.headers.get("host", "").lower().split(":")[0]
+    primary_hosts = {"flexurl.app", "localhost", "127.0.0.1", "testserver"}
+    is_custom_domain = host not in primary_hosts
+
+    domain_user_id = None
+    if is_custom_domain:
+        with Session(engine) as db_session:
+            dom_stmt = select(CustomDomain).where(CustomDomain.domain_name == host).where(CustomDomain.is_verified == True)
+            dom_entry = db_session.exec(dom_stmt).first()
+            if not dom_entry:
+                raise HTTPException(status_code=404, detail="Custom domain not registered or verified")
+            domain_user_id = dom_entry.user_id
+
     try:
         long_url = serve_url(short_url)
     except Exception:
@@ -1246,7 +1325,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             return HTMLResponse(content=f.read(), status_code=410)
             
     # Premium dynamic routing fallback check
-    if long_url == "DYNAMIC" or long_url is None:
+    if long_url == "DYNAMIC" or long_url is None or is_custom_domain:
         from datetime import datetime, UTC
         with Session(engine) as db_session:
             statement = select(urldata).where(urldata.short_url == short_url)
@@ -1255,6 +1334,10 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                 if long_url == "DYNAMIC":
                     raise HTTPException(status_code=503, detail="Service temporary unavailable")
                 raise HTTPException(status_code=404, detail="Short URL not found")
+                
+            # Enforce that short code accessed via custom domain belongs to domain owner
+            if domain_user_id is not None and url_entry.user_id != domain_user_id:
+                raise HTTPException(status_code=404, detail="Short URL not found on this domain")
                 
             # 0. Premium Scheduled Activation check
             is_premium_owned = False
@@ -1554,7 +1637,7 @@ async def post_password_gate(short_url: str, request: Request):
         
         if hashed == url_entry.password_hash:
             response = RedirectResponse(url=f"/{short_url}", status_code=303)
-            response.set_cookie(key=f"auth_link_{short_url}", value=hashed, max_age=3600)
+            response.set_cookie(key=f"auth_link_{short_url}", value=hashed, max_age=3600, httponly=True, samesite="lax")
             return response
         else:
             return RedirectResponse(url=f"/{short_url}?error=1", status_code=303)
