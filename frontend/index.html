@@ -1149,37 +1149,29 @@
                                 premiumWrapper.classList.remove('hidden');
                             }
 
-                            // Fetch verified custom domains
+                            // Fetch registered custom domains
                             try {
                                 const domResp = await fetch('/api/domains');
                                 if (domResp.ok) {
                                     const domains = await domResp.json();
-                                    const verifiedDomains = domains.filter(d => d.is_verified);
-                                    if (verifiedDomains.length > 0) {
+                                    if (domains.length > 0) {
                                         const domainSelectWrapper = document.getElementById('domain-select-wrapper');
                                         const selectEl = document.getElementById('shortener_domain');
                                         if (domainSelectWrapper && selectEl) {
                                             domainSelectWrapper.classList.remove('hidden');
                                             selectEl.innerHTML = '';
 
-                                            if (verifiedDomains.length === 1) {
-                                                const opt = document.createElement('option');
-                                                opt.value = verifiedDomains[0].domain_name;
-                                                opt.textContent = verifiedDomains[0].domain_name;
-                                                selectEl.appendChild(opt);
-                                            } else {
-                                                const defaultOpt = document.createElement('option');
-                                                defaultOpt.value = 'flexurl.app';
-                                                defaultOpt.textContent = 'flexurl.app (Default)';
-                                                selectEl.appendChild(defaultOpt);
+                                            const defaultOpt = document.createElement('option');
+                                            defaultOpt.value = 'flexurl.app';
+                                            defaultOpt.textContent = 'flexurl.app (Default)';
+                                            selectEl.appendChild(defaultOpt);
 
-                                                verifiedDomains.forEach(dom => {
-                                                    const opt = document.createElement('option');
-                                                    opt.value = dom.domain_name;
-                                                    opt.textContent = dom.domain_name;
-                                                    selectEl.appendChild(opt);
-                                                });
-                                            }
+                                            domains.forEach(dom => {
+                                                const opt = document.createElement('option');
+                                                opt.value = dom.domain_name;
+                                                opt.textContent = dom.domain_name;
+                                                selectEl.appendChild(opt);
+                                            });
                                         }
                                     }
                                 }

@@ -1318,10 +1318,10 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
     domain_user_id = None
     if is_custom_domain:
         with Session(engine) as db_session:
-            dom_stmt = select(CustomDomain).where(CustomDomain.domain_name == host).where(CustomDomain.is_verified == True)
+            dom_stmt = select(CustomDomain).where(CustomDomain.domain_name == host)
             dom_entry = db_session.exec(dom_stmt).first()
             if not dom_entry:
-                raise HTTPException(status_code=404, detail="Custom domain not registered or verified")
+                raise HTTPException(status_code=404, detail="Custom domain not registered")
             domain_user_id = dom_entry.user_id
 
     try:

@@ -673,7 +673,12 @@
             table.classList.remove('hidden');
 
             links.forEach(link => {
-                const fullShortUrl = window.location.origin + '/' + link.short_url;
+                let domainHost = window.location.host;
+                if (userDomains && userDomains.length > 0) {
+                    domainHost = userDomains[0].domain_name;
+                }
+                const fullShortUrl = window.location.protocol + '//' + domainHost + '/' + link.short_url;
+                const displayUrl = domainHost + '/' + link.short_url;
                 
                 // Format Date
                 let createdDate = 'N/A';
@@ -713,7 +718,7 @@
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
                         <div class="flex items-center gap-1.5">
-                            <a href="${fullShortUrl}" target="_blank" class="hover:underline hover:text-indigo-600">${link.short_url}</a>
+                            <a href="${fullShortUrl}" target="_blank" class="hover:underline hover:text-indigo-600">${displayUrl}</a>
                             <button onclick="copyToClipboard('${fullShortUrl}', this)" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                             </button>
@@ -1376,9 +1381,9 @@
         // Search listener
         document.getElementById('search-input').addEventListener('input', applyFiltersAndSort);
 
-        // Initialize Page
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchUserDetails();
+            await fetchAndRenderDomains();
             await fetchUserLinks();
 
             // Edit form submit listener
