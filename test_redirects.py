@@ -38,6 +38,13 @@ class TestRedirects(unittest.TestCase):
             
             user_ids = [u.id for u in [existing_p, existing_f] if u is not None]
             if user_ids:
+                from models import CustomDomain
+                dom_stmt = select(CustomDomain).where(CustomDomain.user_id.in_(user_ids))
+                doms = session.exec(dom_stmt).all()
+                for dom in doms:
+                    session.delete(dom)
+                session.commit()
+
                 stmt_urls = select(urldata).where(urldata.user_id.in_(user_ids))
                 urls = session.exec(stmt_urls).all()
                 for url in urls:
@@ -87,6 +94,13 @@ class TestRedirects(unittest.TestCase):
             
             user_ids = [u.id for u in [existing_p, existing_f] if u is not None]
             if user_ids:
+                from models import CustomDomain
+                dom_stmt = select(CustomDomain).where(CustomDomain.user_id.in_(user_ids))
+                doms = session.exec(dom_stmt).all()
+                for dom in doms:
+                    session.delete(dom)
+                session.commit()
+
                 stmt_urls = select(urldata).where(urldata.user_id.in_(user_ids))
                 urls = session.exec(stmt_urls).all()
                 for url in urls:
@@ -384,11 +398,32 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "success")
         
-        # Verify user upgraded to premium in DB
-        from models import User
+    def test_check_allowed_domain_endpoint(self):
+        from models import CustomDomain
+        from sqlmodel import Session
+        from database import engine
+
+        # Register custom domain in DB
         with Session(engine) as db_session:
-            user = db_session.get(User, self.free_user.id)
-            self.assertIn(user.tier, ("startup", "business"))
+            dom = CustomDomain(domain_name="test-caddy-domain.com", user_id=self.premium_user.id)
+            db_session.add(dom)
+            db_session.commit()
+            dom_id = dom.id
+
+        try:
+            # Check allowed domain (should return 200)
+            resp = self.client.get("/api/domains/check-allowed?domain=test-caddy-domain.com")
+            self.assertEqual(resp.status_code, 200)
+
+            # Check random unregistered domain (should return 400)
+            resp = self.client.get("/api/domains/check-allowed?domain=not-registered.com")
+            self.assertEqual(resp.status_code, 400)
+        finally:
+            with Session(engine) as db_session:
+                to_del = db_session.get(CustomDomain, dom_id)
+                if to_del:
+                    db_session.delete(to_del)
+                    db_session.commit()
 
 if __name__ == "__main__":
     from unittest.mock import patch

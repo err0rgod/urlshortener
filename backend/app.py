@@ -593,6 +593,16 @@ async def get_user_domains(request: Request):
         ]
 
 
+@app.get("/api/domains/check-allowed")
+async def check_allowed_domain(domain: str):
+    with Session(engine) as db_session:
+        dom_stmt = select(CustomDomain).where(CustomDomain.domain_name == domain)
+        dom_entry = db_session.exec(dom_stmt).first()
+        if dom_entry:
+            return Response(status_code=200)
+    return Response(status_code=400)
+
+
 @app.post("/api/domains")
 async def create_user_domain(req_data: CustomDomainRequest, request: Request):
     token = request.cookies.get("session_token")
