@@ -155,6 +155,9 @@
                 <button id="tab-profile-btn" onclick="switchTab('profile')" class="border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all focus:outline-none">
                     Profile & Limits
                 </button>
+                <button id="tab-domains-btn" onclick="switchTab('domains')" class="border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all focus:outline-none">
+                    Branded Domains
+                </button>
             </nav>
         </div>
 
@@ -371,6 +374,60 @@
             </div>
         </div>
 
+        <!-- Domains Section -->
+        <div id="domains-section" class="hidden space-y-6">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                <div class="border-b border-slate-100 pb-4 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 tracking-tight">Branded Custom Domains</h3>
+                        <p class="text-xs text-slate-500">Configure your custom brand subdomains for professional redirects.</p>
+                    </div>
+                    <span id="domain-limit-counter" class="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">
+                        Limit: 0 / 0
+                    </span>
+                </div>
+
+                <!-- Free Tier Banner -->
+                <div id="domains-upgrade-banner" class="hidden p-6 border border-indigo-100 bg-indigo-50/50 rounded-xl space-y-4 text-center">
+                    <p class="text-xs text-slate-655 max-w-lg mx-auto">
+                        Branded domains are only available on premium plans. Upgrade to Startup Choice or Business Pro to connect custom domains.
+                    </p>
+                    <div class="flex justify-center gap-3">
+                        <button onclick="startUpgrade('startup')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">
+                            Startup Choice (1 Domain)
+                        </button>
+                        <button onclick="startUpgrade('business')" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors">
+                            Business Pro (5 Domains)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Premium Domains Section Container -->
+                <div id="domains-premium-container" class="space-y-6 hidden">
+                    <!-- Add Domain Form -->
+                    <form id="add-domain-form" class="flex gap-2 max-w-md">
+                        <input type="text" id="domain_input" placeholder="e.g. links.mybrand.com" required
+                            class="flex-grow px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+                            Add Domain
+                        </button>
+                    </form>
+                    <p id="domains-error" class="hidden text-xs text-red-655"></p>
+
+                    <!-- Connected Domains List -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Connected Domains</h4>
+                        <div id="domains-empty-state" class="p-6 border border-dashed border-slate-200 rounded-xl text-center">
+                            <p class="text-xs text-slate-400">No custom domains connected yet. Add one above to get started.</p>
+                        </div>
+                        <div id="domains-list" class="space-y-2 hidden">
+                            <!-- Dynamically populated rows -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Custom Confirmation Modal -->
@@ -521,8 +578,9 @@
                         
                         const tierBadge = document.getElementById('profile-tier-badge');
                         const upgradeContainer = document.getElementById('upgrade-button-container');
+                        const isPremium = ['premium', 'startup', 'business'].includes(data.user.tier);
                         tierBadge.textContent = data.user.tier || 'free';
-                        if (data.user.tier === 'premium') {
+                        if (isPremium) {
                             tierBadge.className = "bg-amber-50 text-amber-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-amber-200";
                             if (upgradeContainer) {
                                 upgradeContainer.classList.add('hidden');
@@ -935,7 +993,7 @@
 
         // Switch tab
         function switchTab(tab) {
-            const tabs = ['links', 'activity', 'profile'];
+            const tabs = ['links', 'activity', 'profile', 'domains'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-${t}-btn`);
                 const sec = document.getElementById(`${t}-section`);
@@ -952,6 +1010,8 @@
                 fetchRecentClicks();
             } else if (tab === 'profile') {
                 updateProfileLimits();
+            } else if (tab === 'domains') {
+                fetchAndRenderDomains();
             }
         }
 
@@ -1103,7 +1163,7 @@
             const dailyLinks = allLinks.filter(l => l.created_at && new Date(l.created_at) >= oneDayAgo).length;
             const monthlyLinks = allLinks.filter(l => l.created_at && new Date(l.created_at) >= thirtyDaysAgo).length;
             
-            const isPremium = userDetails.tier === 'premium';
+            const isPremium = ['premium', 'startup', 'business'].includes(userDetails.tier);
             
             const dailyLabel = document.getElementById('limit-daily-used').parentElement;
             const monthlyLabel = document.getElementById('limit-monthly-used').parentElement;
@@ -1124,6 +1184,93 @@
                 const monthlyPercent = Math.min(100, (monthlyLinks / 100) * 100);
                 document.getElementById('limit-monthly-bar').style.width = `${monthlyPercent}%`;
             }
+        }
+
+        // Fetch custom domains list and update UI status
+        let userDomains = [];
+        async function fetchAndRenderDomains() {
+            if (!userDetails) return;
+
+            const isPremium = ['premium', 'startup', 'business'].includes(userDetails.tier);
+            const upgradeBanner = document.getElementById('domains-upgrade-banner');
+            const premiumContainer = document.getElementById('domains-premium-container');
+            const limitCounter = document.getElementById('domain-limit-counter');
+
+            if (!isPremium) {
+                upgradeBanner.classList.remove('hidden');
+                premiumContainer.classList.add('hidden');
+                limitCounter.textContent = 'Limit: 0 / 0';
+                return;
+            }
+
+            upgradeBanner.classList.add('hidden');
+            premiumContainer.classList.remove('hidden');
+
+            const limit = userDetails.tier === 'startup' ? 1 : 5;
+
+            try {
+                const response = await fetch('/api/domains');
+                if (!response.ok) throw new Error("Failed to fetch domains");
+                userDomains = await response.json();
+
+                limitCounter.textContent = `Limit: ${userDomains.length} / ${limit}`;
+
+                const listEl = document.getElementById('domains-list');
+                const emptyEl = document.getElementById('domains-empty-state');
+                listEl.innerHTML = '';
+
+                if (userDomains.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                    listEl.classList.add('hidden');
+                } else {
+                    emptyEl.classList.add('hidden');
+                    listEl.classList.remove('hidden');
+
+                    userDomains.forEach(dom => {
+                        const row = document.createElement('div');
+                        row.className = "flex items-center justify-between p-3 border border-slate-150 rounded-xl bg-slate-50/30 text-xs";
+                        row.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-slate-800">${dom.domain_name}</span>
+                                <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${dom.is_verified ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+                                    ${dom.is_verified ? 'Verified' : 'Pending'}
+                                </span>
+                            </div>
+                            <button onclick="deleteDomain(${dom.id})" class="text-xs text-red-600 hover:text-red-750 font-semibold cursor-pointer">
+                                Remove
+                            </button>
+                        `;
+                        listEl.appendChild(row);
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Delete connected custom domain
+        async function deleteDomain(domainId) {
+            showConfirmationModal({
+                title: 'Remove Custom Domain',
+                message: 'Are you sure you want to remove this custom domain? Active shortened links pointing to this custom domain will stop redirecting properly.',
+                confirmText: 'Remove',
+                confirmStyle: 'danger',
+                onConfirm: async () => {
+                    try {
+                        const response = await fetch(`/api/domains/${domainId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            await fetchAndRenderDomains();
+                        } else {
+                            const err = await response.json();
+                            showCustomAlert(`Error: ${err.detail || 'Failed to remove domain'}`);
+                        }
+                    } catch (err) {
+                        showCustomAlert('Failed to remove domain due to connection error.');
+                    }
+                }
+            });
         }
 
         // Search listener
@@ -1196,6 +1343,39 @@
                             await fetchUserLinks();
                         } else {
                             errorEl.textContent = data.detail || 'Failed to save changes';
+                            errorEl.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        errorEl.textContent = 'Connection error. Please try again.';
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+            }
+
+            // Custom domains form submit listener
+            const addDomainForm = document.getElementById('add-domain-form');
+            if (addDomainForm) {
+                addDomainForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const inputEl = document.getElementById('domain_input');
+                    const errorEl = document.getElementById('domains-error');
+                    const domainName = inputEl.value.trim();
+
+                    errorEl.classList.add('hidden');
+
+                    try {
+                        const response = await fetch('/api/domains', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ domain_name: domainName })
+                        });
+
+                        if (response.ok) {
+                            inputEl.value = '';
+                            await fetchAndRenderDomains();
+                        } else {
+                            const err = await response.json();
+                            errorEl.textContent = err.detail || 'Failed to add custom domain';
                             errorEl.classList.remove('hidden');
                         }
                     } catch (err) {

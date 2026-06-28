@@ -1,6 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
+    <script>
+        // Check theme preference before rendering to prevent flashing (default to light)
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Link Activating Soon - FlexURL</title>
@@ -23,53 +31,53 @@
         }
     </script>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center overflow-hidden relative">
+<body class="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans min-h-screen flex flex-col items-center justify-center overflow-hidden relative">
     <!-- Radial Background Gradient -->
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.05)_0%,transparent_70%)] dark:bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.1)_0%,transparent_70%)] pointer-events-none"></div>
 
     <div class="z-10 flex flex-col items-center max-w-md w-full px-6 text-center">
         <!-- Animated Shield SVG Graphic -->
-        <div class="relative flex items-center justify-center w-24 h-24 mb-8 bg-slate-900/80 rounded-full border border-slate-800 shadow-2xl backdrop-blur-sm group">
-            <div class="absolute inset-0 rounded-full bg-emerald-500/20 blur-xl opacity-75 animate-pulse"></div>
+        <div class="relative flex items-center justify-center w-24 h-24 mb-8 bg-slate-50 dark:bg-slate-900/80 rounded-full border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-sm group">
+            <div class="absolute inset-0 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 blur-xl opacity-75 animate-pulse"></div>
             <svg class="relative w-12 h-12 text-emerald-500 animate-pulse" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
             </svg>
         </div>
 
         <!-- Heading -->
-        <h1 class="text-3xl font-extrabold tracking-tight text-white mb-2">
+        <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">
             Link Activating Soon
         </h1>
-        <p class="text-slate-400 text-sm mb-8 leading-relaxed">
+        <p class="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">
             This shortened URL has been scheduled by its creator. It will become accessible automatically when the countdown reaches zero.
         </p>
 
         <!-- Countdown Timer Card -->
         <div id="countdown-container" class="grid grid-cols-4 gap-3 w-full max-w-xs mb-8">
             <!-- Days -->
-            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
-                <span id="days" class="text-2xl font-bold text-white tracking-tight">00</span>
+            <div class="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="days" class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">00</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Days</span>
             </div>
             <!-- Hours -->
-            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
-                <span id="hours" class="text-2xl font-bold text-white tracking-tight">00</span>
+            <div class="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="hours" class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">00</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Hrs</span>
             </div>
             <!-- Minutes -->
-            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
-                <span id="minutes" class="text-2xl font-bold text-white tracking-tight">00</span>
+            <div class="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="minutes" class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">00</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Min</span>
             </div>
             <!-- Seconds -->
-            <div class="flex flex-col items-center justify-center bg-slate-900/60 border border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
-                <span id="seconds" class="text-2xl font-bold text-emerald-400 tracking-tight">00</span>
+            <div class="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+                <span id="seconds" class="text-2xl font-bold text-emerald-500 tracking-tight">00</span>
                 <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-500 mt-1">Sec</span>
             </div>
         </div>
 
         <!-- Footer / Branding -->
-        <div class="text-xs text-slate-600 border-t border-slate-900/80 pt-6 w-full">
+        <div class="text-xs text-slate-500 border-t border-slate-100 dark:border-slate-900/80 pt-6 w-full">
             Powered by <span class="font-semibold text-slate-500">FlexURL</span>
         </div>
     </div>

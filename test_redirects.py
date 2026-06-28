@@ -387,7 +387,7 @@ class TestRedirects(unittest.TestCase):
         from models import User
         with Session(engine) as db_session:
             user = db_session.get(User, self.free_user.id)
-            self.assertEqual(user.tier, "premium")
+            self.assertIn(user.tier, ("startup", "business"))
 
 if __name__ == "__main__":
     from unittest.mock import patch

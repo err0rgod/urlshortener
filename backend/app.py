@@ -17,9 +17,10 @@ from validations import is_valid_url, check_safe_browsing, is_valid_custom_alias
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
-from models import clicklog, urldata, User
+from models import clicklog, urldata, User, CustomDomain
 from analytics_parser import parse_referer, parse_user_agent, get_ip_country, get_ip_location, check_is_bot
 from typing import Optional
+from datetime import datetime, UTC
 import time
 import jwt
 from sqlmodel import Session, select
@@ -240,7 +241,7 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
             # Premium Webhook alert delivery
             if url_entry.webhook_url and url_entry.user_id:
                 user = db_session.get(User, url_entry.user_id)
-                if user and user.tier == "premium":
+                if user and user.tier in ("premium", "startup", "business"):
                     webhook_payload = {
                         "short_url": url_entry.short_url,
                         "long_url": url_entry.long_url,
@@ -271,6 +272,10 @@ class PaymentVerifyRequest(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
+
+
+class CustomDomainRequest(BaseModel):
+    domain_name: str
 
 
 @app.post("/api/payments/create-order")
@@ -339,12 +344,19 @@ async def verify_payment(req_data: PaymentVerifyRequest, request: Request):
         user = db_session.get(User, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        user.tier = "premium"
+        
+        try:
+            order_info = razorpay_client.order.fetch(req_data.razorpay_order_id)
+            amount = order_info.get("amount", 150000)
+        except Exception:
+            amount = 150000
+            
+        user.tier = "business" if amount == 390000 else "startup"
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
         
-    return {"status": "success", "message": "Successfully upgraded to Premium!"}
+    return {"status": "success", "message": f"Successfully upgraded to {user.tier}!"}
 
 
 # analytics endpoint for specific short url only accessed by owner
@@ -374,7 +386,7 @@ async def get_url_analytics(short_url: str, request: Request):
 
         # Check if user is premium
         user = db_session.get(User, user_id)
-        if not user or user.tier != "premium":
+        if not user or user.tier not in ("premium", "startup", "business"):
             raise HTTPException(
                 status_code=403, 
                 detail="Analytics are a premium feature. Please upgrade your subscription."
@@ -428,7 +440,7 @@ async def get_url_analytics(short_url: str, request: Request):
 
         # User premium state check
         user = db_session.get(User, user_id)
-        is_premium = (user.tier == "premium") if user else False
+        is_premium = (user.tier in ("premium", "startup", "business")) if user else False
 
         by_city = []
         bot_clicks = 0
@@ -550,6 +562,125 @@ async def get_recent_clicks(request: Request, limit: int = 10):
             })
         return result
 
+# --- Custom Domains Endpoints ---
+
+@app.get("/api/domains")
+async def get_user_domains(request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    with Session(engine) as db_session:
+        statement = select(CustomDomain).where(CustomDomain.user_id == user_id).order_by(CustomDomain.created_at.desc())
+        domains = db_session.exec(statement).all()
+        return [
+            {
+                "id": dom.id,
+                "domain_name": dom.domain_name,
+                "is_verified": dom.is_verified,
+                "created_at": dom.created_at.isoformat() if dom.created_at else None
+            }
+            for dom in domains
+        ]
+
+
+@app.post("/api/domains")
+async def create_user_domain(req_data: CustomDomainRequest, request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    domain_name = req_data.domain_name.strip().lower()
+    if not domain_name:
+        raise HTTPException(status_code=400, detail="Domain name cannot be empty")
+
+    with Session(engine) as db_session:
+        user = db_session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Determine limits
+        if user.tier not in ("premium", "startup", "business"):
+            raise HTTPException(status_code=403, detail="Upgrade to premium to integrate custom domains")
+
+        limit = 1 if user.tier == "startup" else 5
+
+        # Check current domain count
+        count_statement = select(func.count(CustomDomain.id)).where(CustomDomain.user_id == user_id)
+        current_count = db_session.exec(count_statement).one()
+
+        if current_count >= limit:
+            raise HTTPException(status_code=400, detail=f"Domain limit reached ({limit} max) for your tier")
+
+        # Check duplicate domain
+        dup_statement = select(CustomDomain).where(CustomDomain.domain_name == domain_name)
+        existing = db_session.exec(dup_statement).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="This domain has already been added")
+
+        new_domain = CustomDomain(
+            domain_name=domain_name,
+            user_id=user_id,
+            is_verified=True,  # Auto-verified for instant premium prototype utility
+            created_at=datetime.now(UTC).replace(tzinfo=None)
+        )
+        db_session.add(new_domain)
+        db_session.commit()
+        db_session.refresh(new_domain)
+
+        return {
+            "id": new_domain.id,
+            "domain_name": new_domain.domain_name,
+            "is_verified": new_domain.is_verified,
+            "created_at": new_domain.created_at.isoformat() if new_domain.created_at else None
+        }
+
+
+@app.delete("/api/domains/{domain_id}")
+async def delete_user_domain(domain_id: int, request: Request):
+    token = request.cookies.get("session_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is not None:
+            user_id = int(user_id)
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid session token")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    with Session(engine) as db_session:
+        domain = db_session.get(CustomDomain, domain_id)
+        if not domain:
+            raise HTTPException(status_code=404, detail="Domain not found")
+        if domain.user_id != user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        db_session.delete(domain)
+        db_session.commit()
+        return {"status": "success", "message": "Domain removed"}
+
+
 # lists all the links of the user auth required
 @app.get("/api/user/links")
 async def get_user_links(request: Request):
@@ -619,8 +750,7 @@ async def export_analytics_csv(short_url: str, request: Request):
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Verify user has premium access
-        user = db_session.get(User, user_id)
-        if not user or user.tier != "premium":
+        if not user or user.tier not in ("premium", "startup", "business"):
             raise HTTPException(status_code=403, detail="CSV export is a Premium feature")
 
         # Fetch click log entries sorted by click date
@@ -688,7 +818,12 @@ async def toggle_user_tier(request: Request):
             )
         
         # Toggle tier
-        user.tier = "premium" if user.tier == "free" else "free"
+        if user.tier == "free":
+            user.tier = "startup"
+        elif user.tier == "startup":
+            user.tier = "business"
+        else:
+            user.tier = "free"
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
@@ -713,9 +848,8 @@ async def edit_link(short_url: str, request: Request, edit_data: URLEditRequest)
 
     from datetime import datetime, UTC
     with Session(engine) as db_session:
-        # Check if user is premium
         user = db_session.get(User, user_id)
-        if not user or user.tier != "premium":
+        if not user or user.tier not in ("premium", "startup", "business"):
             raise HTTPException(status_code=403, detail="Editing links is a premium-only feature.")
 
         # Get link
@@ -967,7 +1101,7 @@ async def analytics(short_url: str, request: Request):
 
         # Check if user is premium
         user = db_session.get(User, user_id)
-        if not user or user.tier != "premium":
+        if not user or user.tier not in ("premium", "startup", "business"):
             raise HTTPException(
                 status_code=403, 
                 detail="Analytics are a premium feature. Please upgrade your subscription."
@@ -1027,8 +1161,7 @@ async def analytics(short_url: str, request: Request):
             .order_by(func.count(clicklog.id).desc())
         ).all()
         # User premium state check
-        user = db_session.get(User, user_id)
-        is_premium = (user.tier == "premium") if user else False
+        is_premium = (user.tier in ("premium", "startup", "business")) if user else False
 
         by_city = []
         bot_clicks = 0
@@ -1127,7 +1260,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             is_premium_owned = False
             if url_entry.user_id:
                 user = db_session.get(User, url_entry.user_id)
-                if user and user.tier == "premium":
+                if user and user.tier in ("premium", "startup", "business"):
                     is_premium_owned = True
 
             if is_premium_owned and url_entry.activation_time:
@@ -1155,7 +1288,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                 # Custom fallback redirect
                 if url_entry.fallback_url and url_entry.user_id:
                     user = db_session.get(User, url_entry.user_id)
-                    if user and user.tier == "premium":
+                    if user and user.tier in ("premium", "startup", "business"):
                         return RedirectResponse(url_entry.fallback_url, status_code=302)
                 
                 with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
@@ -1169,7 +1302,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             # 3. Password check
             if url_entry.password_hash and url_entry.user_id:
                 user = db_session.get(User, url_entry.user_id)
-                if user and user.tier == "premium":
+                if user and user.tier in ("premium", "startup", "business"):
                     cookie_name = f"auth_link_{short_url}"
                     auth_cookie = request.cookies.get(cookie_name)
                     if auth_cookie != url_entry.password_hash:
@@ -1180,7 +1313,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             target_url = url_entry.long_url
             if url_entry.user_id:
                 user = db_session.get(User, url_entry.user_id)
-                if user and user.tier == "premium":
+                if user and user.tier in ("premium", "startup", "business"):
                     user_agent = request.headers.get("user-agent", "").lower()
                     if "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent:
                         if url_entry.ios_url:
@@ -1251,7 +1384,7 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             if db_user:
                 user_tier = db_user.tier
 
-    if user_tier != "premium" and (request.activation_time or request.custom_countdown_url):
+    if user_tier not in ("premium", "startup", "business") and (request.activation_time or request.custom_countdown_url):
         raise HTTPException(
             status_code=400,
             detail="Scheduled URL activation is a premium-only feature."
@@ -1334,20 +1467,21 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
 
     try:
         # Extract premium parameters if the user is premium
-        webhook_url = request.webhook_url if user_tier == "premium" else None
-        ios_url = request.ios_url if user_tier == "premium" else None
-        android_url = request.android_url if user_tier == "premium" else None
-        fallback_url = request.fallback_url if user_tier == "premium" else None
+        is_premium_user = user_tier in ("premium", "startup", "business")
+        webhook_url = request.webhook_url if is_premium_user else None
+        ios_url = request.ios_url if is_premium_user else None
+        android_url = request.android_url if is_premium_user else None
+        fallback_url = request.fallback_url if is_premium_user else None
         
         activation_time = None
-        if request.activation_time and user_tier == "premium":
+        if request.activation_time and is_premium_user:
             try:
                 dt = datetime.fromisoformat(request.activation_time)
                 activation_time = dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid activation time format. Must be ISO datetime string.")
                 
-        custom_countdown_url = request.custom_countdown_url if user_tier == "premium" else None
+        custom_countdown_url = request.custom_countdown_url if is_premium_user else None
 
         # SSRF Protection: Validate premium parameters if supplied
         if webhook_url and not await is_valid_url(webhook_url):
@@ -1362,7 +1496,7 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             raise HTTPException(status_code=400, detail="Invalid, insecure, or private custom countdown URL")
 
         password_hash = None
-        if request.password and user_tier == "premium":
+        if request.password and is_premium_user:
             import hashlib
             salt = "flexurl_salt_secure_2026"
             password_hash = hashlib.sha256((request.password + salt).encode('utf-8')).hexdigest()

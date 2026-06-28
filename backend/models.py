@@ -57,3 +57,16 @@ class clicklog(SQLModel, table=True):
     device: str = Field(nullable=False, default="NA")
     referer: str = Field(nullable=False, default="NA")
     is_bot: bool = Field(default=False)  # Premium: flag to filter crawler traffic
+
+
+class CustomDomain(SQLModel, table=True):
+    """
+    Stores custom domains integrated by premium users for branded redirections.
+    """
+    __tablename__ = "custom_domains"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    domain_name: str = Field(unique=True, index=True, nullable=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    user_id: int = Field(foreign_key="users.id", nullable=False)
+    is_verified: bool = Field(default=False)
