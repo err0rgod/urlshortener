@@ -1313,8 +1313,7 @@ async def analytics(short_url: str, request: Request):
 async def get_short_give_long(short_url: str, request : Request, backgroud_tasks : BackgroundTasks):
     # Host header custom domain mapping check
     host = request.headers.get("host", "").lower().split(":")[0]
-    primary_hosts = {"flexurl.app", "localhost", "127.0.0.1", "testserver"}
-    is_custom_domain = host not in primary_hosts
+    is_custom_domain = not (host == "flexurl.app" or host.endswith(".flexurl.app") or host in ("localhost", "127.0.0.1", "testserver"))
 
     domain_user_id = None
     if is_custom_domain:
