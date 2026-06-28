@@ -1,9 +1,9 @@
-add payment page 
-
-domain connect 
+docs
+logo 
 
 add optimizations from load test website 
 
-features:  billing
 add turnstile and zerotrust on admin pages other cloud flare features 
 create web crawler for leads
+
+

@@ -214,6 +214,32 @@ async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to process quotation request")
 
+
+# documentation page route
+@app.get("/documentation", response_class=HTMLResponse)
+async def documentation():
+    with open(os.path.join(FRONTEND_DIR, "documentation.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+# support tickets request class
+class SupportTicketRequest(BaseModel):
+    name: str = Field(..., max_length=255)
+    email: str = Field(..., max_length=255)
+    subject: str = Field(..., max_length=255)
+    message: str = Field(..., max_length=5000)
+
+
+# post endpoint for support tickets
+@app.post("/api/support")
+async def create_support_ticket(ticket: SupportTicketRequest, background_tasks: BackgroundTasks):
+    try:
+        from support_ticket import process_support_ticket
+        background_tasks.add_task(process_support_ticket, ticket.model_dump())
+        return {"status": "success", "message": "Support ticket submitted successfully"}
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to process support ticket")
+
 # for gathering analytics 
 async def record_analytics(short_url : str, ip_address : str, user_agent : str, referer : str):
     """

@@ -11,4 +11,4 @@ Disallow: /analytics/
 Disallow: /Expired
 Disallow: /BANNED
 
-Sitemap: https://link.zerodaily.in/sitemap.xml
+Sitemap: https://flexurl.app/sitemap.xml

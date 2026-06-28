@@ -268,7 +268,9 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "https://example.com/sched-target-past")
 
-    def test_post_shorten_premium_activation(self):
+    @patch("app.is_valid_url")
+    def test_post_shorten_premium_activation(self, mock_is_valid):
+        mock_is_valid.return_value = True
         import jwt
         from app import JWT_SECRET_KEY
         token = jwt.encode({"user_id": self.premium_user.id, "email": self.premium_user.email}, JWT_SECRET_KEY, algorithm="HS256")
@@ -293,7 +295,9 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("premium-only feature", response.json()["detail"])
 
-    def test_premium_user_can_edit_link(self):
+    @patch("app.is_valid_url")
+    def test_premium_user_can_edit_link(self, mock_is_valid):
+        mock_is_valid.return_value = True
         import jwt
         from app import JWT_SECRET_KEY
         from short_url_gen import add_custom_url

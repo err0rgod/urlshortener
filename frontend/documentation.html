@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        // Apply dark mode theme class during load to avoid flashing
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlexURL Documentation & Support Center</title>
+    <meta name="description" content="Official documentation and developer integration guide for FlexURL redirection infrastructure.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                <span>FlexURL</span>
+            </a>
+            <div class="flex items-center space-x-4">
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" type="button" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+                <a href="/dashboard" class="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Go to Dashboard</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row gap-8 py-10 flex-grow">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="md:w-64 flex-shrink-0">
+            <nav class="sticky top-24 space-y-1">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">Getting Started</p>
+                <button onclick="scrollToSection('intro')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-indigo-600 dark:text-indigo-400 nav-btn" data-sec="intro">Introduction</button>
+                <button onclick="scrollToSection('shortening')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="shortening">URL Shortening & Custom Aliases</button>
+
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">Premium Features</p>
+                <button onclick="scrollToSection('expiry')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="expiry">Expiration & Fallbacks</button>
+                <button onclick="scrollToSection('webhook')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="webhook">Real-Time Webhooks</button>
+                <button onclick="scrollToSection('targeting')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="targeting">Device Targeting</button>
+                <button onclick="scrollToSection('passcode')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="passcode">Passcode Protection</button>
+                <button onclick="scrollToSection('scheduling')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="scheduling">Scheduled Activation</button>
+
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">Infrastructure & Admin</p>
+                <button onclick="scrollToSection('domains')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="domains">Custom Domains Setup</button>
+                <button onclick="scrollToSection('payments')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="payments">Pricing & Payments</button>
+
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">Help & Assistance</p>
+                <button onclick="scrollToSection('support')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="support">Support Tickets</button>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow max-w-3xl space-y-16">
+            
+            <!-- Section: Intro -->
+            <section id="sec-intro" class="scroll-mt-24 space-y-4">
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">FlexURL Documentation</h1>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Welcome to the FlexURL documentation hub. FlexURL is a secure, privacy-first, enterprise-grade redirection platform designed to help teams and developers create clean, branded short links with native analytics, bypassing bloated URL tracking parameters.
+                </p>
+            </section>
+
+            <!-- Section: Shortening & Aliases -->
+            <section id="sec-shortening" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">URL Shortening & Custom Aliases</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    By default, pasting a target URL inside the generator card yields a randomized Base62-encoded short link. Standard users can optionally supply a custom alias.
+                </p>
+                <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2">
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200">How to use:</p>
+                    <ul class="text-xs text-slate-500 list-disc list-inside space-y-1">
+                        <li>Enter your target URL (e.g. <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">https://google.com</code>).</li>
+                        <li>Check the **Custom Alias** checkbox to specify a clean path slug like <code class="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">summer-sale</code>.</li>
+                        <li>Submit to generate your redirect link.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section: Expiration & Fallbacks -->
+            <section id="sec-expiry" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Link Expiration & Fallback URL Policy</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Set lifetime boundaries for marketing campaigns. Free accounts are limited to a maximum expiration of 15 days, while premium accounts can schedule absolute times or configure fallback redirect targets for expired clicks.
+                </p>
+                <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 space-y-2">
+                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200">Fallback Configuration:</p>
+                    <p class="text-xs text-slate-500">
+                        When editing a link on your dashboard, fill in the **Fallback URL** field. If a user clicks the short link after the expiration timestamp has passed, the router immediately redirects them to your fallback destination instead of displaying our default expired error template.
+                    </p>
+                </div>
+            </section>
+
+            <!-- Section: Webhooks -->
+            <section id="sec-webhook" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Real-Time Webhooks Event Sync</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Sync redirection traffic telemetry logs instantly to your analytics pipeline, marketing stacks, or monitoring platforms.
+                </p>
+                <p class="text-xs text-slate-500">
+                    When specified, the router posts a JSON payload to your webhook endpoint asynchronously during redirection:
+                </p>
+                <pre class="bg-slate-900 text-slate-100 text-[10px] font-mono p-4 rounded-xl overflow-x-auto leading-relaxed border border-slate-800">{
+  "event": "link.redirect",
+  "short_code": "x8a2f",
+  "visitor": {
+    "ip_country": "IN",
+    "device_type": "mobile",
+    "client_os": "Android",
+    "referer": "https://t.co/"
+  }
+}</pre>
+            </section>
+
+            <!-- Section: Targeting -->
+            <section id="sec-targeting" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Device-Targeted Redirects</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Configure custom routes depending on client operating systems. Specify separate destination URLs for **iOS** and **Android** users. For example, route users directly to their respective App Store or Google Play Store download pages, while other platforms default to the standard destination URL.
+                </p>
+            </section>
+
+            <!-- Section: Passcode Protection -->
+            <section id="sec-passcode" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Passcode Protection Gate</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Secure private materials, internal files, or beta releases. If a passcode is added to a short link, visitors must input the correct credentials on a clean verification gate page before the router authorizes redirection to the destination target.
+                </p>
+            </section>
+
+            <!-- Section: Scheduling -->
+            <section id="sec-scheduling" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Scheduled Activation Time</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Prepare your marketing releases in advance. A scheduled short link will remain locked and display a real-time countdown timer until its specific activation time passes. You can also specify a custom countdown target URL to redirect visitors elsewhere until the activation hour arrives.
+                </p>
+            </section>
+
+            <!-- Section: Custom Domains -->
+            <section id="sec-domains" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Custom Domains Setup (Caddy / Nginx & Cloudflare)</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    To connect your custom brand domain (e.g., `links.mybrand.com`), you need to update your DNS records and configure your reverse proxy server.
+                </p>
+
+                <div class="space-y-4 text-xs">
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-2">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">1. Update DNS Records (CNAME / A)</p>
+                        <p class="text-slate-500">
+                            Point your custom domain/subdomain to `flexurl.app` via CNAME in your DNS registrar (GoDaddy, Namecheap, Cloudflare, Route 53):
+                        </p>
+                        <code class="block font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">Type: CNAME | Name: links | Target: flexurl.app</code>
+                    </div>
+
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-2">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">2. Nginx configuration (VPS Reverse Proxy)</p>
+                        <p class="text-slate-500">
+                            Update your default server block configuration to catch all custom domains and proxy them to FastAPI (Port 8000):
+                        </p>
+                        <pre class="font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded block overflow-x-auto">server {
+    listen 443 ssl default_server;
+    server_name _;
+    
+    # Point to your primary domain's Certbot SSL certificate keys
+    ssl_certificate /etc/letsencrypt/live/flexurl.app/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/flexurl.app/privkey.pem;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</pre>
+                    </div>
+
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-2">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">3. Cloudflare SSL Mode Integration</p>
+                        <p class="text-slate-500 leading-relaxed">
+                            Set your Cloudflare SSL/TLS encryption setting to **Full** (non-strict). This instructs Cloudflare to establish an encrypted HTTPS connection to your VPS, using your primary default server certificate for the custom domain handshake.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section: Pricing & Payments -->
+            <section id="sec-payments" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Pricing & Razorpay Payments</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Premium subscription upgrades are priced in USD for global customers ($19 for Startup Choice, $39 for Business Pro) but are securely processed in INR internally (₹1599 and ₹3499). This allows seamless support for UPI, Google Pay, PhonePe, Paytm, domestic Netbanking, and international credit cards.
+                </p>
+            </section>
+
+            <!-- Section: Support Tickets Form -->
+            <section id="sec-support" class="scroll-mt-24 space-y-6 border-t border-slate-250 dark:border-slate-800 pt-10">
+                <div class="space-y-2 text-center md:text-left">
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">Support & Assistance Center</h2>
+                    <p class="text-xs text-slate-500">
+                        Have a question, request, or technical query? Submit a ticket below, and our support team will reach out directly to your email.
+                    </p>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+                    <form id="support-form" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase">Your Name</label>
+                                <input type="text" id="support_name" required placeholder="e.g. John Doe"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
+                                <input type="email" id="support_email" required placeholder="name@company.com"
+                                    class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Subject</label>
+                            <input type="text" id="support_subject" required placeholder="How can we help you?"
+                                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                        </div>
+
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Message Query Details</label>
+                            <textarea id="support_message" required rows="4" placeholder="Please describe your technical question, billing issue, or feature request in detail..."
+                                class="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800 resize-none"></textarea>
+                        </div>
+
+                        <div id="support-status" class="hidden text-xs p-3 rounded-lg text-left"></div>
+
+                        <div class="pt-2">
+                            <button type="submit" id="support-submit-btn"
+                                class="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-nowrap uppercase tracking-wider">
+                                Submit Ticket
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-8 px-4 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400">
+                &copy; 2026 FlexURL. All rights reserved.
+            </div>
+            <div class="flex space-x-6">
+                <a href="/documentation" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">Documentation</a>
+                <a href="/privacy" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">Privacy Policy</a>
+                <a href="/terms" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll to sections
+        function scrollToSection(id) {
+            const el = document.getElementById('sec-' + id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+                
+                // Highlight active button in sidebar
+                document.querySelectorAll('.nav-btn').forEach(btn => {
+                    if (btn.getAttribute('data-sec') === id) {
+                        btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+                        btn.classList.add('text-indigo-600', 'dark:text-indigo-400');
+                    } else {
+                        btn.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+                        btn.classList.add('text-slate-600', 'dark:text-slate-300');
+                    }
+                });
+            }
+        }
+
+        // Handle Support Ticket form submission
+        const supportForm = document.getElementById('support-form');
+        const supportStatus = document.getElementById('support-status');
+        const supportSubmitBtn = document.getElementById('support-submit-btn');
+
+        if (supportForm) {
+            supportForm.onsubmit = async (e) => {
+                e.preventDefault();
+                supportStatus.classList.add('hidden');
+                supportSubmitBtn.disabled = true;
+                supportSubmitBtn.textContent = 'Submitting...';
+
+                const name = document.getElementById('support_name').value.trim();
+                const email = document.getElementById('support_email').value.trim();
+                const subject = document.getElementById('support_subject').value.trim();
+                const message = document.getElementById('support_message').value.trim();
+
+                try {
+                    const response = await fetch('/api/support', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, subject, message })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        supportStatus.textContent = 'Support ticket submitted successfully! Our team will contact you soon.';
+                        supportStatus.className = 'text-xs p-3 rounded-lg text-left bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50';
+                        supportStatus.classList.remove('hidden');
+                        supportForm.reset();
+                    } else {
+                        supportStatus.textContent = data.detail || 'Failed to submit support ticket. Please try again.';
+                        supportStatus.className = 'text-xs p-3 rounded-lg text-left bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50';
+                        supportStatus.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    supportStatus.textContent = 'Network connection error. Please verify your connection and try again.';
+                    supportStatus.className = 'text-xs p-3 rounded-lg text-left bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50';
+                    supportStatus.classList.remove('hidden');
+                } finally {
+                    supportSubmitBtn.disabled = false;
+                    supportSubmitBtn.textContent = 'Submit Ticket';
+                }
+            };
+        }
+
+        // Theme Toggle Functionality
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (document.documentElement.classList.contains('dark')) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            
+            if (localStorage.getItem('theme')) {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            }
+            window.dispatchEvent(new Event('theme-changed'));
+        });
+    </script>
+</body>
+</html>
