@@ -689,12 +689,27 @@ async def verify_user_domain(domain_id: int, request: Request):
         is_verified = False
         try:
             domain_ip = socket.gethostbyname(domain.domain_name)
+            
+            main_ips = []
             try:
-                main_ip = socket.gethostbyname("flexurl.app")
+                import httpx
+                async with httpx.AsyncClient(timeout=2.0) as client:
+                    resp = await client.get("https://dns.google/resolve?name=flexurl.app")
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        answers = data.get("Answer", [])
+                        main_ips = [ans["data"] for ans in answers if ans.get("type") == 1]
             except Exception:
-                main_ip = "127.0.0.1"
-                
-            if domain_ip == main_ip or domain_ip in ("127.0.0.1", "localhost", "testserver"):
+                pass
+
+            if not main_ips:
+                try:
+                    main_ips = [socket.gethostbyname("flexurl.app")]
+                except Exception:
+                    main_ips = []
+
+            valid_ips = set(main_ips) | {"127.0.0.1", "localhost", "testserver"}
+            if domain_ip in valid_ips:
                 is_verified = True
         except Exception:
             pass
