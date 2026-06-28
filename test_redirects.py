@@ -363,8 +363,8 @@ class TestRedirects(unittest.TestCase):
         
         mock_rz.order.create.return_value = {
             "id": "order_test_123",
-            "amount": 1900,
-            "currency": "USD"
+            "amount": 159900,
+            "currency": "INR"
         }
         
         token = jwt.encode({"user_id": self.free_user.id, "email": self.free_user.email}, JWT_SECRET_KEY, algorithm="HS256")
@@ -374,8 +374,8 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         res_json = response.json()
         self.assertEqual(res_json["order_id"], "order_test_123")
-        self.assertEqual(res_json["amount"], 1900)
-        self.assertEqual(res_json["currency"], "USD")
+        self.assertEqual(res_json["amount"], 159900)
+        self.assertEqual(res_json["currency"], "INR")
 
     @patch("app.razorpay_client")
     def test_verify_payment_success(self, mock_rz):
@@ -384,7 +384,7 @@ class TestRedirects(unittest.TestCase):
         
         # mock signature verification and order fetch to pass
         mock_rz.utility.verify_payment_signature.return_value = True
-        mock_rz.order.fetch.return_value = {"amount": 1900, "currency": "USD"}
+        mock_rz.order.fetch.return_value = {"amount": 159900, "currency": "INR"}
         
         token = jwt.encode({"user_id": self.free_user.id, "email": self.free_user.email}, JWT_SECRET_KEY, algorithm="HS256")
         self.client.cookies.set("session_token", token)

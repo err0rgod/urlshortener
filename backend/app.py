@@ -295,10 +295,10 @@ async def create_payment_order(req_data: PaymentOrderRequest, request: Request):
         raise HTTPException(status_code=500, detail="Razorpay client not configured")
         
     try:
-        amount = 4900 if req_data.plan == "business" else 1900
+        amount = 349900 if req_data.plan == "business" else 159900
         order_data = {
             "amount": amount,
-            "currency": "USD",
+            "currency": "INR",
             "receipt": f"receipt_{user_id}_{int(time.time())}"
         }
         order = razorpay_client.order.create(data=order_data)
@@ -347,11 +347,11 @@ async def verify_payment(req_data: PaymentVerifyRequest, request: Request):
         
         try:
             order_info = razorpay_client.order.fetch(req_data.razorpay_order_id)
-            amount = order_info.get("amount", 1900)
+            amount = order_info.get("amount", 159900)
         except Exception:
-            amount = 1900
+            amount = 159900
             
-        user.tier = "business" if amount == 4900 else "startup"
+        user.tier = "business" if amount == 349900 else "startup"
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
