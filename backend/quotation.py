@@ -61,22 +61,29 @@ def save_to_json(data: dict):
         raise e
 
 def send_email_via_resend(data: dict):
+    import html
     url = "https://api.resend.com/emails"
     headers = {
         "Authorization": f"Bearer {RESEND_API_KEY}",
         "Content-Type": "application/json"
     }
 
+    escaped_biz = html.escape(data.get('business_name', ''))
+    escaped_primary = html.escape(data.get('primary_contact', ''))
+    escaped_alternate = html.escape(data.get('alternate_contact') or 'N/A')
+    escaped_cloud = html.escape(data.get('cloud_provider') or 'Not Specified')
+    escaped_demand = html.escape(data.get('demand_desc', '')).replace('\n', '<br>')
+
     # Format mail contents
     html_content = f"""
     <h2>New FlexURL Enterprise Dedicated Inquiry</h2>
-    <p><strong>Business Name:</strong> {data.get('business_name')}</p>
-    <p><strong>Primary Contact:</strong> {data.get('primary_contact')}</p>
-    <p><strong>Alternate Contact:</strong> {data.get('alternate_contact') or 'N/A'}</p>
-    <p><strong>Preferred Infrastructure:</strong> {data.get('cloud_provider') or 'Not Specified'}</p>
+    <p><strong>Business Name:</strong> {escaped_biz}</p>
+    <p><strong>Primary Contact:</strong> {escaped_primary}</p>
+    <p><strong>Alternate Contact:</strong> {escaped_alternate}</p>
+    <p><strong>Preferred Infrastructure:</strong> {escaped_cloud}</p>
     <p><strong>Requirements Demand Description:</strong></p>
     <blockquote style="background: #f4f4f5; border-left: 4px solid #6366f1; padding: 12px 16px; margin: 12px 0; font-family: sans-serif;">
-        {data.get('demand_desc').replace('\n', '<br>')}
+        {escaped_demand}
     </blockquote>
     <p style="color: #9ca3af; font-size: 11px; margin-top: 24px; border-top: 1px solid #e5e7eb; pt: 8px;">
         Generated automatically by the FlexURL lead dispatch system.
@@ -86,7 +93,7 @@ def send_email_via_resend(data: dict):
     payload = {
         "from": "FlexURL Quotes <onboarding@resend.dev>",
         "to": [TARGET_EMAIL],
-        "subject": f"FlexURL Lead - {data.get('business_name')}",
+        "subject": f"FlexURL Lead - {escaped_biz}",
         "html": html_content
     }
 

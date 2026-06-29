@@ -429,6 +429,60 @@ class TestRedirects(unittest.TestCase):
                     db_session.delete(to_del)
                     db_session.commit()
 
+    def test_contact_and_support_endpoints(self):
+        # Test GET /quotes returns 200 HTML page
+        resp = self.client.get("/quotes", follow_redirects=False)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("text/html", resp.headers["content-type"])
+
+        # Test GET /support returns HTML page
+        resp = self.client.get("/support")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("text/html", resp.headers["content-type"])
+
+        # Test POST /api/support validation and response
+        payload = {
+            "name": "Test User",
+            "email": "test@example.com",
+            "subject": "Help Needed",
+            "message": "This is a query message."
+        }
+        resp = self.client.post("/api/support", json=payload)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["status"], "success")
+
+    def test_create_custom_domain_validation(self):
+        import jwt
+        from app import JWT_SECRET_KEY
+        token = jwt.encode({"user_id": self.premium_user.id, "email": self.premium_user.email}, JWT_SECRET_KEY, algorithm="HS256")
+        self.client.cookies.set("session_token", token)
+
+        # Valid domain
+        payload = {"domain_name": "sub.brand-new.io"}
+        resp = self.client.post("/api/domains", json=payload)
+        self.assertEqual(resp.status_code, 200)
+
+        # Clean up valid domain
+        from models import CustomDomain
+        from sqlmodel import Session, select
+        from database import engine
+        with Session(engine) as db_session:
+            stmt = select(CustomDomain).where(CustomDomain.domain_name == "sub.brand-new.io")
+            entry = db_session.exec(stmt).first()
+            if entry:
+                db_session.delete(entry)
+                db_session.commit()
+
+        # Invalid domain format (path traversal attempt)
+        payload = {"domain_name": "../../etc/passwd"}
+        resp = self.client.post("/api/domains", json=payload)
+        self.assertEqual(resp.status_code, 400)
+
+        # Invalid domain format (XSS attempt)
+        payload = {"domain_name": "<script>alert(1)</script>.com"}
+        resp = self.client.post("/api/domains", json=payload)
+        self.assertEqual(resp.status_code, 400)
+
 if __name__ == "__main__":
     from unittest.mock import patch
     import unittest

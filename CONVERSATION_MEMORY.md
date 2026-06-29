@@ -2,7 +2,7 @@
 
 ## Context
 This project is **FlexURL**, a URL shortener built with FastAPI, SQLModel/PostgreSQL, Redis, and a Vanilla JS frontend.
-We are implementing premium subscription features (passwords, custom fallback URLs, iOS/Android target routing, real-time webhooks, bot detection, city-level geolocation analytics, and CSV log exports).
+We have implemented premium subscription features (passwords, custom fallback URLs, iOS/Android target routing, real-time webhooks, bot detection, city-level geolocation analytics, and CSV log exports).
 
 ---
 
@@ -10,43 +10,35 @@ We are implementing premium subscription features (passwords, custom fallback UR
 
 ### 1. Backend (Fully Implemented & Secured)
 All backend logic supporting premium capabilities and security validation is active:
-- **`backend/models.py`:** Removed the `unique=True` constraint from the `long_url` column in `urldata` table. This allows users to create custom aliases/premium target configurations for a destination even if it was previously shortened.
-- **`backend/database.py`:**
-  - In `init_db()`, added automatic SQL code execution to safely drop the PostgreSQL index/constraint `urldata_long_url_key` if it exists.
-  - Updated `is_long_url_exists` to partition URL lookups by ownership, checking if the current user has already shortened the URL. If the user is logged in, it also checks for and adopts anonymous links, preventing returning other users' short codes.
-- **`backend/short_url_gen.py`:** Removed `is_long_url_exists` check in `add_custom_url` to allow the creation of custom URL shortcuts for any destination.
+- **`backend/models.py`:** Removed the `unique=True` constraint from the `long_url` column in `urldata` table. Added the `CustomDomain` model to associate user domains.
+- **`backend/database.py`:** In `init_db()`, added automatic SQL code execution to safely drop the PostgreSQL index/constraint `urldata_long_url_key` if it exists.
 - **`backend/app.py`:**
-  - **Route Ordering Fix:** Moved the `@app.post("/shorten")` route above the wildcard `@app.post("/{short_url}")` route. This resolves a routing conflict where wildcard parameter routing captured POST requests to `/shorten` and threw a `404 Short URL not found` error.
-  - **Dynamic Redis check:** Premium links are marked in Redis as `"DYNAMIC"` (instead of standard redirects) to enforce SQL database checks on access.
-  - **Redirect handling:** Gate serving for password-protected links, smart routing based on request User-Agent (`iOS` or `Android`), firing post-redirect webhooks asynchronously, and custom expired URL redirects.
-  - **Export:** Premium-only endpoint `GET /api/analytics/{short_url}/export` to stream raw click logs as CSV.
-  - **Admin Tier Toggle:** Secured `POST /api/user/toggle-tier` to only allow the developer email specified in `ADMIN_EMAIL` env variable.
-  - **Anonymous Link Rate Limiter:** Capped anonymous URL creations to 5 links per 24 hours per IP address using Redis to prevent database spamming.
-  - **Resource Exhaustion Bounds:** Constrained the `limit` query parameter on `GET /api/user/recent-clicks` to prevent DoS.
-  - **SSRF Validation:** Enforced private network validations on all premium parameter URLs (`webhook_url`, `ios_url`, `android_url`, `fallback_url`) using `is_valid_url`.
-  - **Recent Click Stream Payload:** Updated `GET /api/analytics/{short_url}` and pre-rendered HTML template payload to query and return the 5 most recent visitor click log entries if the owner has premium.
-  - **Proactive Alias Validation:** Added verification in `/shorten` to return a `400 Bad Request` if a custom alias is already taken.
-  - **Session User ID Type Casting:** Cast decoded JWT `user_id` values to `int` inside `/shorten`, `/api/analytics/{short_url}`, `/api/analytics/{short_url}/export`, `/analytics/{short_url}`, `/api/user/recent-clicks`, `/api/user/links`, `/api/user/account`, and `/api/user/delete-custom-url` routes to eliminate type mismatch issues against database integer values.
-  - **Anonymous Analytics Access:** Enabled Premium users to view analytics for anonymous links (`user_id is None`) by adjusting the ownership validation checks.
+  - **Custom Domain Routing:** Implemented dynamic host-header lookup on `GET /{short_url}` redirection. FastAPI checks if the incoming host header is a registered custom domain, matches the link owner ID, and executes redirects securely.
+  - **On-Demand TLS Helper Route:** Added `GET /api/domains/check-allowed` to verify custom domains.
+  - **Domain Registration Formats (Stored XSS Prevention):** Added strict regex validation in `POST /api/domains` to restrict domain names to valid DNS characters, blocking folder traversal paths and script injection tags.
+  - **Dynamic Redis Cache:** Premium links are marked in Redis as `"DYNAMIC"` to enforce DB-level redirect parameter checks.
+  - **Support Ticketing API & UI:** Added a dedicated `/support` route serving a clean, user-friendly [support.html](file:///D:/urlshortener/frontend/support.html) ticket center. Handled query submissions via `POST /api/support` to save queries to `support_tickets.json` and dispatch email alerts to the admin's `ADMIN_EMAIL`. Escaped all user input values using `html.escape` to prevent HTML Injection/XSS in email clients.
+  - **Quotes Page Route:** Remapped `/quotes` route to serve [contact.html](file:///D:/urlshortener/frontend/contact.html) for custom Enterprise Quotes. Escaped all user-provided business details in `quotation.py` to prevent HTML injection email vulnerabilities.
+  - **Documentation Route:** Added `GET /documentation` to serve the interactive documentation page.
+  - **Client IP Resolution:** Added `get_client_ip` helper resolving actual visitor IPs from Cloudflare (`CF-Connecting-IP`) and reverse proxy (`X-Forwarded-For`) headers, resolving the Netherlands/Amsterdam geolocation mismatch.
+  - **Premium Checkout Pricing:** Set up Razorpay backend order API to charge in INR (₹1599/month for Startup Choice, ₹3499/month for Business Pro) to support domestic UPI/QR code and card processing, while maintaining USD pricing displayed in the frontend.
 
 ### 2. Frontend UI
 All frontend interface files are completed with high-impact, premium aesthetics:
-- **[index.html](file:///D:/urlshortener/frontend/index.html):** Added a Premium Advanced Settings panel (Webhook URL, Passcode Protection, iOS Target, Android Target, Fallback URL) that is automatically revealed under the shorten widget for premium subscribers. Submits parameters in the POST body to `/shorten`.
-- **[dashboard.html](file:///D:/urlshortener/frontend/dashboard.html):** Removed the "Delete My Account" button from the Profile settings section. Added a modern gradient welcome hero card for premium users and locked analytics button with a ban symbol modal warning for free users.
-- **[analytics.html](file:///D:/urlshortener/frontend/analytics.html):** Recreated as a stunning, dark-themed command-center style dashboard featuring:
-  - *Dynamic Bot Traffic Filter Switch:* A toggle that instantly filters out crawler/bot clicks from all charts and totals with smooth layout recalculations.
-  - *Real-time click feed:* A live visual list of the last 5 visitors showing IP addresses, geolocated cities, device details, and human/bot badge categorization.
-  - *Custom Chart styles:* Hand-crafted Chart.js configurations with customized tooltips, layout alignments, border radii, and glowing linear fills.
-  - *Data Pre-Rendering:* Supports `window.__INITIAL_DATA__` injection to eliminate background API requests on load.
-  - *TypeError Crash Fixes:* Restored the missing DOM element `display-created-at` in the Destination layout row, and added defensive check conditions to ensure updates to `metric-device` bypass errors if its card is absent, preventing the page layout from crashing and displaying the "Access Denied" error state card.
-  - *Chart Render Optimization:* Disabled Chart.js entry animations (`animation: false` on line, bar, and doughnut charts) to completely eliminate browser layout rendering lag when drawing multiple chart canvases concurrently or toggling bot traffic filters.
+- **[index.html](file:///D:/urlshortener/frontend/index.html):** Swapped the "Most Popular" highlight badge and Indigo card formatting to the Startup Choice ($19/mo) plan. Changed the video choice header to "Which founder are you?". Replaced duplicate footer items and API links with clean Resources and Legal columns including a Contact Support link to `/support`.
+- **[documentation.html](file:///D:/urlshortener/frontend/documentation.html):** Added an interactive, responsive documentation page detailing all features, DNS setup with Nginx/Cloudflare, and an integrated Support Ticket contact form.
+- **[dashboard.html](file:///D:/urlshortener/frontend/dashboard.html):** Restructured custom domain dropdown options, displaying custom domains instead of root hosts. Changed billing tier pricing buttons to show USD values ($19 and $39).
+- **Footer & Header Cleanups:** Removed all personal social links pointing to `err0rgod` profiles (`github.com/err0rgod`, `x.com/err0rgod`, `linkedin.com/in/nirbhay-katiyar`, `err0rgod.medium.com`) and updated copyright headers to "FlexURL". Cleaned up the header navigation across system template pages (`privacy.html`, `terms.html`, `banned.html`, `expired.html`) to link to `/documentation` and `/support` instead of dead anchors.
 
 ---
 
-## Database & Caching Status
-- Constraint `urldata_long_url_key` has been dropped, allowing duplicates.
-- Caching logic handles `"Expired"`, `"DYNAMIC"`, and standard direct caching seamlessly.
-- Maintained `ndgaming458@gmail.com` as `"premium"` tier, and successfully reverted `nirbhayerror@gmail.com` back to `"free"` tier in the database.
+## Infrastructure & Nginx Configuration
+- **Cloudflare SSL Integration:** Configured to run in **Full (non-strict)** mode, which routes encrypted traffic to the origin VPS and accepts the fallback primary certificate for the custom domain handshake.
+- **Nginx configuration (`/etc/nginx/sites-available/urlshortener`):**
+  - **HTTP/2 support:** Enabled via `listen 443 ssl http2 default_server;`.
+  - **Gzip Compression:** Enabled inside the server blocks.
+  - **Canonical Redirects:** Automatically redirects HTTP to HTTPS and `www` to non-`www` *only* for the primary domain (`flexurl.app`), preventing redirect loop issues with custom domains using Cloudflare Flexible mode.
+  - **Custom Domain Proxying:** Catch-all default block forwards all HTTP/HTTPS custom domain requests directly to FastAPI port 8000.
 
 ---
 
@@ -58,4 +50,4 @@ All frontend interface files are completed with high-impact, premium aesthetics:
 ---
 
 ## Next Steps for Future Sessions
-If a new conversation is started, the next step is to test the integration in production or add new payment gateway hooks.
+All core workflows, pricing, and infrastructure routes have been fully completed and tested. The application is ready for marketing and production deployment.

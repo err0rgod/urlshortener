@@ -1,5 +1,5 @@
 Contact: mailto:nirbhayerror@gmail.com
-Contact: https://link.zerodaily.in/contact
+Contact: https://flexurl.app/support
 Expires: 2027-06-25T00:00:00.000Z
 Preferred-Languages: en
-Canonical: https://link.zerodaily.in/.well-known/security.txt
+Canonical: https://flexurl.app/.well-known/security.txt

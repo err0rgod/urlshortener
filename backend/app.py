@@ -191,10 +191,17 @@ async def login():
     with open(os.path.join(FRONTEND_DIR, "login.html"), encoding="utf-8") as f:
         return f.read()
 
-# contact page for custom quotes from startups and teams
-@app.get("/contact", response_class=HTMLResponse)
-async def contact():
+# quotes page for custom quotes from startups and teams
+@app.get("/quotes", response_class=HTMLResponse)
+async def quotes():
     with open(os.path.join(FRONTEND_DIR, "contact.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+# support page route
+@app.get("/support", response_class=HTMLResponse)
+async def support():
+    with open(os.path.join(FRONTEND_DIR, "support.html"), encoding="utf-8") as f:
         return f.read()
 # Quotesrequest class
 class QuoteRequest(BaseModel):
@@ -657,6 +664,10 @@ async def create_user_domain(req_data: CustomDomainRequest, request: Request):
     domain_name = req_data.domain_name.strip().lower()
     if not domain_name:
         raise HTTPException(status_code=400, detail="Domain name cannot be empty")
+        
+    import re
+    if not re.match(r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$", domain_name):
+        raise HTTPException(status_code=400, detail="Invalid domain name format")
 
     with Session(engine) as db_session:
         user = db_session.get(User, user_id)

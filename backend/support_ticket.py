@@ -48,20 +48,26 @@ def save_to_json(data: dict):
         logger.error(f"Error writing to support JSON file: {e}")
 
 def send_email_via_resend(data: dict):
+    import html
     url = "https://api.resend.com/emails"
     headers = {
         "Authorization": f"Bearer {RESEND_API_KEY}",
         "Content-Type": "application/json"
     }
 
+    escaped_name = html.escape(data.get('name', ''))
+    escaped_email = html.escape(data.get('email', ''))
+    escaped_subject = html.escape(data.get('subject', ''))
+    escaped_message = html.escape(data.get('message', '')).replace('\n', '<br>').replace('\\n', '<br>')
+
     html_content = f"""
     <h2>New Support Ticket Received</h2>
-    <p><strong>Name:</strong> {data.get('name')}</p>
-    <p><strong>Email:</strong> {data.get('email')}</p>
-    <p><strong>Subject:</strong> {data.get('subject')}</p>
+    <p><strong>Name:</strong> {escaped_name}</p>
+    <p><strong>Email:</strong> {escaped_email}</p>
+    <p><strong>Subject:</strong> {escaped_subject}</p>
     <p><strong>Message:</strong></p>
     <blockquote style="background: #f4f4f5; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 12px 0; font-family: sans-serif;">
-        {data.get('message').replace('\\n', '<br>').replace('\n', '<br>')}
+        {escaped_message}
     </blockquote>
     <p style="color: #9ca3af; font-size: 11px; margin-top: 24px; border-top: 1px solid #e5e7eb; pt: 8px;">
         Generated automatically by the FlexURL Support Ticketing system.
@@ -71,7 +77,7 @@ def send_email_via_resend(data: dict):
     payload = {
         "from": "FlexURL Support <support@resend.dev>",
         "to": [TARGET_EMAIL],
-        "subject": f"FlexURL Support - {data.get('subject')}",
+        "subject": f"FlexURL Support - {escaped_subject}",
         "html": html_content
     }
 

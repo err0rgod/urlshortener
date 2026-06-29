@@ -19,20 +19,26 @@
         <priority>0.8</priority>
     </url>
     <url>
-        <loc>https://flexurl.app/contact</loc>
-        <lastmod>2026-06-28</lastmod>
+        <loc>https://flexurl.app/quotes</loc>
+        <lastmod>2026-06-29</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://flexurl.app/support</loc>
+        <lastmod>2026-06-29</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     <url>
         <loc>https://flexurl.app/privacy</loc>
-        <lastmod>2026-06-28</lastmod>
+        <lastmod>2026-06-29</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://flexurl.app/terms</loc>
-        <lastmod>2026-06-28</lastmod>
+        <lastmod>2026-06-29</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
     </url>

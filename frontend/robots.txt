@@ -2,7 +2,8 @@ User-agent: *
 Allow: /
 Allow: /privacy
 Allow: /terms
-Allow: /contact
+Allow: /quotes
+Allow: /support
 Allow: /login
 Allow: /security.txt
 Disallow: /api/

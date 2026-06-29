@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        // Apply dark mode theme class during load to avoid flashing
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Support - FlexURL</title>
+    <meta name="description" content="Submit a support ticket or get in touch with the FlexURL assistance team.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Header -->
+    <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <a href="/" class="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                <span>FlexURL</span>
+            </a>
+            <div class="flex items-center space-x-6">
+                <nav class="hidden md:flex items-center space-x-6 text-sm">
+                    <a href="/" class="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Home</a>
+                    <a href="/documentation" class="font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Documentation</a>
+                </nav>
+                <!-- Theme Toggle Button -->
+                <button id="theme-toggle" type="button" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
+                    <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center py-16 px-4">
+        <div class="max-w-xl w-full space-y-8">
+            <div class="text-center">
+                <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Contact Support</h1>
+                <p class="mt-2 text-sm text-slate-500">
+                    Have a question, feedback, or a technical inquiry? Submit a ticket below, and our team will get in touch with you shortly.
+                </p>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 shadow-sm">
+                <form id="support-form" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Your Name</label>
+                            <input type="text" id="support_name" required placeholder="e.g. John Doe"
+                                class="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Email Address</label>
+                            <input type="email" id="support_email" required placeholder="name@company.com"
+                                class="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Subject</label>
+                        <input type="text" id="support_subject" required placeholder="How can we help you?"
+                            class="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800">
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">Message Query</label>
+                        <textarea id="support_message" required rows="5" placeholder="Please describe your question or issue in detail..."
+                            class="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-800 resize-none"></textarea>
+                    </div>
+
+                    <div id="support-status" class="hidden text-xs p-3 rounded-lg text-left"></div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="support-submit-btn"
+                            class="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 whitespace-nowrap uppercase tracking-wider">
+                            Submit Ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-8 px-4 mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400">
+                &copy; 2026 FlexURL. All rights reserved.
+            </div>
+            <div class="flex space-x-6">
+                <a href="/documentation" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">Documentation</a>
+                <a href="/privacy" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">Privacy Policy</a>
+                <a href="/terms" class="text-xs text-slate-400 hover:text-indigo-600 transition-colors">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const supportForm = document.getElementById('support-form');
+        const supportStatus = document.getElementById('support-status');
+        const supportSubmitBtn = document.getElementById('support-submit-btn');
+
+        if (supportForm) {
+            supportForm.onsubmit = async (e) => {
+                e.preventDefault();
+                supportStatus.classList.add('hidden');
+                supportSubmitBtn.disabled = true;
+                supportSubmitBtn.textContent = 'Submitting...';
+
+                const name = document.getElementById('support_name').value.trim();
+                const email = document.getElementById('support_email').value.trim();
+                const subject = document.getElementById('support_subject').value.trim();
+                const message = document.getElementById('support_message').value.trim();
+
+                try {
+                    const response = await fetch('/api/support', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, email, subject, message })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        supportStatus.textContent = 'Support ticket submitted successfully! Our team will contact you soon.';
+                        supportStatus.className = 'text-xs p-3 rounded-lg text-left bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50';
+                        supportStatus.classList.remove('hidden');
+                        supportForm.reset();
+                    } else {
+                        supportStatus.textContent = data.detail || 'Failed to submit support ticket. Please try again.';
+                        supportStatus.className = 'text-xs p-3 rounded-lg text-left bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50';
+                        supportStatus.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    supportStatus.textContent = 'Network connection error. Please verify your connection and try again.';
+                    supportStatus.className = 'text-xs p-3 rounded-lg text-left bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/50';
+                    supportStatus.classList.remove('hidden');
+                } finally {
+                    supportSubmitBtn.disabled = false;
+                    supportSubmitBtn.textContent = 'Submit Ticket';
+                }
+            };
+        }
+
+        // Theme Toggle Functionality
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        if (document.documentElement.classList.contains('dark')) {
+            themeToggleLightIcon.classList.remove('hidden');
+        } else {
+            themeToggleDarkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            themeToggleDarkIcon.classList.toggle('hidden');
+            themeToggleLightIcon.classList.toggle('hidden');
+            
+            if (localStorage.getItem('theme')) {
+                if (localStorage.getItem('theme') === 'light') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                }
+            } else {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            }
+            window.dispatchEvent(new Event('theme-changed'));
+        });
+    </script>
+</body>
+</html>
