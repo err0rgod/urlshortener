@@ -23,7 +23,7 @@
    - Connected form submissions to a backend `/api/support` endpoint which logs tickets to `support_tickets.json` and sends admin notification emails via the Resend API to `ADMIN_EMAIL`. Escaped all user inputs using `html.escape` to block HTML Injection in email clients.
    - Remapped the custom Enterprise Quotes page to `/quotes` (serving `contact.html` directly without redirects). Escaped all business profile inputs inside `quotation.py` to prevent HTML injection email vulnerabilities.
    - Linked to `/support`, `/quotes`, and `/documentation` from all template page headers and footers, removing old `API Keys` and `API Docs` placeholders.
-   - Updated the custom domains guide on [documentation.html](file:///D:/urlshortener/frontend/documentation.html) to detail the new strict routing access constraints.
+   - Updated the custom domains guide on [documentation.html](file:///D:/urlshortener/frontend/documentation.html) to detail the new strict routing access constraints and describe branded domain creation procedures.
    - Added regex-based domain format verification in `/api/domains` to prevent Stored XSS attacks inside the user dashboard.
 
 5. **Author Branding & Landing Page Updates:**

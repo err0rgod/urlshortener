@@ -1,12 +1,12 @@
 # Project Maintenance and Migration Guide
 
 ## Project Structure
-- app.py: Main entry point and API routes.
-- models.py: SQLModel database schemas.
-- database.py: Database connection and CRUD operations.
-- short_url_gen.py: ID generation (Sonyflake) and caching logic.
-- validations.py: URL validation and Safe Browsing integration.
-- templates/: HTML files for the frontend.
+- app.py: Main entry point, auth dependencies, and API routes.
+- models.py: SQLModel database schemas and Pydantic request models.
+- database.py: Database connection, migration commands, and CRUD operations.
+- short_url_gen.py: ID generation (Sonyflake), caching logic, and dynamic parameters mapping.
+- validations.py: URL validation, Safe Browsing integration, and custom alias checks.
+- frontend/: HTML/CSS/JS files for the single page web application.
 
 ## Configuration (Environment Variables)
 The application requires a .env file in the root directory with the following keys:
@@ -34,9 +34,10 @@ The application is served via Nginx on port 80/443.
 - Config Location: /etc/nginx/sites-available/urlshortener
 - Critical header: proxy_set_header X-Forwarded-Proto $scheme; (Required for Cloudflare Full Strict mode).
 
-## SSL and Cloudflare
-- SSL is handled by Certbot on the server and Proxied by Cloudflare.
-- Cloudflare SSL mode must be set to Full (Strict).
+## SSL and Cloudflare (SSL for SaaS)
+- The primary domain SSL is handled by Nginx fallback certificates (or Certbot) on the server and proxied by Cloudflare.
+- Cloudflare SSL mode should be set to **Full (non-strict)** to authorize edge validation for users' custom domains without certificate verification loop issues.
+- Connect custom hostnames via the Cloudflare dashboard Fallback Origin configuration mapping to `fallback-origin.flexurl.app`.
 - Static IPv4 must be attached in the AWS Lightsail console.
 
 ## Update Workflow
