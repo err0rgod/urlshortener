@@ -24,9 +24,10 @@
    - Linked to `/support`, `/quotes`, and `/documentation` from all template page headers and footers, removing old `API Keys` and `API Docs` placeholders.
    - Added regex-based domain format verification in `/api/domains` to prevent Stored XSS attacks inside the user dashboard.
 
-5. **Author Branding Cleanups:**
+5. **Author Branding & Landing Page Updates:**
    - Removed personal social links (GitHub, Twitter/X, Medium, LinkedIn, PyPI) belonging to the author `err0rgod` from all HTML footers and input placeholders across the site.
    - Swapped "Most Popular" plan visual highlighting to Startup Choice ($19/mo).
+   - Exposed the advanced settings panel on the home page to all logged-in profiles (including free users) but disabled editing permissions and added upgrade alert prompts.
 
 6. **SEO & Meta Enhancements:**
    - Corrected canonical URLs to `https://flexurl.app/` inside robots.txt and sitemap.xml.

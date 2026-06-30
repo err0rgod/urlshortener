@@ -1160,13 +1160,31 @@
                             `;
                         }
                         
-                        // Reveal premium advanced options panel if premium
+                        // Reveal premium advanced options panel for all logged-in users
                         const currentUserTier = data.user.tier;
+                        const isLoggedIn = !!currentUserTier;
                         const isPremium = ['premium', 'startup', 'business'].includes(currentUserTier);
-                        if (isPremium) {
+                        if (isLoggedIn) {
                             const premiumWrapper = document.getElementById('premium-wrapper');
                             if (premiumWrapper) {
                                 premiumWrapper.classList.remove('hidden');
+                            }
+
+                            if (!isPremium) {
+                                // Disable all inputs inside premium options
+                                const inputs = document.querySelectorAll('#premium-options-container input, #premium-options-container select');
+                                inputs.forEach(input => {
+                                    input.disabled = true;
+                                    input.style.cursor = 'not-allowed';
+                                    input.style.opacity = '0.6';
+                                });
+                                // Add click event listener to premium wrapper to alert user
+                                const optionsContainer = document.getElementById('premium-options-container');
+                                if (optionsContainer) {
+                                    optionsContainer.addEventListener('click', () => {
+                                        alert("Advanced parameters, webhooks, passcode protection, targeting, and custom domains are premium-only features. Please upgrade your subscription to access them.");
+                                    });
+                                }
                             }
 
                             // Fetch registered custom domains
@@ -1192,6 +1210,12 @@
                                                 opt.textContent = dom.domain_name;
                                                 selectEl.appendChild(opt);
                                             });
+
+                                            if (!isPremium) {
+                                                selectEl.disabled = true;
+                                                selectEl.style.cursor = 'not-allowed';
+                                                selectEl.style.opacity = '0.6';
+                                            }
                                         }
                                     }
                                 }
