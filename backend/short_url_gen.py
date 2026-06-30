@@ -48,7 +48,7 @@ def add_url(
     custom_countdown_url: Optional[str] = None,
     domain: Optional[str] = None
 ):
-    exists = is_long_url_exists(long_url, user_id=user_id)
+    exists = is_long_url_exists(long_url, user_id=user_id, domain=domain)
     if exists:
         return exists
     db_exp_time = None

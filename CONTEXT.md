@@ -30,6 +30,8 @@
    - Removed personal social links (GitHub, Twitter/X, Medium, LinkedIn, PyPI) belonging to the author `err0rgod` from all HTML footers and input placeholders across the site.
    - Swapped "Most Popular" plan visual highlighting to Startup Choice ($19/mo).
    - Exposed the advanced settings panel on the home page to all logged-in profiles (including free users) but disabled editing permissions and added upgrade alert prompts.
+   - Passed selected custom domain parameter in the JSON payload of the shorten AJAX call to ensure correct database storage.
+   - Updated the `is_long_url_exists` check to match on the chosen domain, preventing duplicate record re-use without domains.
 
 6. **SEO & Meta Enhancements:**
    - Corrected canonical URLs to `https://flexurl.app/` inside robots.txt and sitemap.xml.

@@ -1327,6 +1327,9 @@
                     url += `?${params.join('&')}`;
                 }
 
+                const selectEl = document.getElementById('shortener_domain');
+                const chosenDomain = selectEl && selectEl.value ? selectEl.value : "flexurl.app";
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1338,7 +1341,8 @@
                         android_url: android_url || null,
                         fallback_url: fallback_url || null,
                         activation_time: activation_time || null,
-                        custom_countdown_url: custom_countdown_url || null
+                        custom_countdown_url: custom_countdown_url || null,
+                        domain: chosenDomain
                     })
                 });
 

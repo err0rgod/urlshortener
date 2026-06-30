@@ -104,7 +104,7 @@ def mark_url_banned(short_url: str):
             session.commit()
     
 
-def is_long_url_exists(long_url: str, user_id: Optional[int] = None) -> Optional[str]:
+def is_long_url_exists(long_url: str, user_id: Optional[int] = None, domain: Optional[str] = None) -> Optional[str]:
     """
     Checks if a long destination URL has already been shortened.
     If the link exists and is anonymous, optionally associates it with the authenticated user.
@@ -112,20 +112,21 @@ def is_long_url_exists(long_url: str, user_id: Optional[int] = None) -> Optional
     Args:
         long_url (str): The destination URL.
         user_id (Optional[int]): The ID of the authenticated user to associate.
+        domain (Optional[str]): The custom domain chosen.
         
     Returns:
         Optional[str]: The short URL code if exists, None otherwise.
     """
     with Session(engine) as session:
         # Check if this user has already shortened this destination URL
-        statement = select(urldata).where(urldata.long_url == long_url).where(urldata.user_id == user_id)
+        statement = select(urldata).where(urldata.long_url == long_url).where(urldata.user_id == user_id).where(urldata.domain == domain)
         results = session.exec(statement).first()
         if results is not None:
             return results.short_url
             
         # If logged in, check if there is an anonymous link we can adopt
-        if user_id:
-            statement = select(urldata).where(urldata.long_url == long_url).where(urldata.user_id == None)
+        if user_id and domain is None:
+            statement = select(urldata).where(urldata.long_url == long_url).where(urldata.user_id == None).where(urldata.domain == None)
             results = session.exec(statement).first()
             if results is not None:
                 results.user_id = user_id
