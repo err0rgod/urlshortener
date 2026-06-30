@@ -35,6 +35,10 @@
    - Corrected canonical URLs to `https://flexurl.app/` inside robots.txt and sitemap.xml.
    - Embedded structured JSON-LD Schema markup in `index.html` to enable rich snippet generation in search results.
 
+7. **Code Consolidation & Authentication Refactoring:**
+   - Moved all request schemas and Pydantic models from `app.py` to `models.py`, making all schema definitions central and unified.
+   - Replaced redundant JWT token decoding and cookie validation logic across endpoints with FastAPI dependency injection helpers (`get_optional_user_id` and `get_required_user_id`), significantly reducing boilerplate code.
+
 ---
 
 ## Current Status

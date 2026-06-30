@@ -8,9 +8,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Response
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Response, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
-from pydantic import BaseModel, Field
 from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
 from database import mark_url_banned, init_db, add_clicklog, engine
 from validations import is_valid_url, check_safe_browsing, is_valid_custom_alias
@@ -18,7 +17,11 @@ from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
 from cloudflare_saas import CloudflareSaaSManager
-from models import clicklog, urldata, User, CustomDomain
+from models import (
+    clicklog, urldata, User, CustomDomain, URLRequest, URLEditRequest,
+    QuoteRequest, SupportTicketRequest, PaymentOrderRequest, PaymentVerifyRequest,
+    CustomDomainRequest
+)
 from analytics_parser import parse_referer, parse_user_agent, get_ip_country, get_ip_location, check_is_bot
 from typing import Optional
 from datetime import datetime, UTC
@@ -31,6 +34,28 @@ from logger import logger
 from report_scheduler import daily_report_scheduler_loop
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+
+
+# Auth dependency helpers
+def get_optional_user_id(request: Request) -> Optional[int]:
+    token = request.cookies.get("session_token")
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("user_id")
+        if user_id is not None:
+            return int(user_id)
+    except jwt.PyJWTError:
+        pass
+    return None
+
+
+def get_required_user_id(request: Request) -> int:
+    user_id = get_optional_user_id(request)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return user_id
 
 import razorpay
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
@@ -110,31 +135,6 @@ async def rate_limit_middleware(request : Request, call_next):
     return response
 
 
-
-class URLRequest(BaseModel):
-    long_url: str = Field(..., max_length=2048)
-    webhook_url: Optional[str] = Field(None, max_length=2048)
-    ios_url: Optional[str] = Field(None, max_length=2048)
-    android_url: Optional[str] = Field(None, max_length=2048)
-    password: Optional[str] = Field(None, max_length=255)
-    fallback_url: Optional[str] = Field(None, max_length=2048)
-    activation_time: Optional[str] = Field(None)
-    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
-    domain: Optional[str] = Field(None, max_length=255)
-
-
-class URLEditRequest(BaseModel):
-    long_url: Optional[str] = Field(None, max_length=2048)
-    webhook_url: Optional[str] = Field(None, max_length=2048)
-    ios_url: Optional[str] = Field(None, max_length=2048)
-    android_url: Optional[str] = Field(None, max_length=2048)
-    password: Optional[str] = Field(None, max_length=255)
-    fallback_url: Optional[str] = Field(None, max_length=2048)
-    activation_time: Optional[str] = Field(None)
-    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
-    exp_time: Optional[str] = Field(None)
-
-
 # checks if the url is safe or not, if not marks them as banned in the Database & when a user visits a banned url he see's a banned url page
 async def background_safe_browsing_check(short_url: str, long_url: str):
     is_safe = await check_safe_browsing(long_url)
@@ -205,14 +205,6 @@ async def quotes():
 async def support():
     with open(os.path.join(FRONTEND_DIR, "support.html"), encoding="utf-8") as f:
         return f.read()
-# Quotesrequest class
-class QuoteRequest(BaseModel):
-    business_name: str = Field(..., max_length=255)
-    primary_contact: str = Field(..., max_length=255)
-    alternate_contact: Optional[str] = Field(None, max_length=255)
-    cloud_provider: Optional[str] = Field(None, max_length=50)
-    demand_desc: str = Field(..., max_length=5000)
-
 # post endpoint for sending the details to admin
 @app.post("/contact-sales")
 async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
@@ -229,14 +221,6 @@ async def contact_sales(quote: QuoteRequest, background_tasks: BackgroundTasks):
 async def documentation():
     with open(os.path.join(FRONTEND_DIR, "documentation.html"), encoding="utf-8") as f:
         return f.read()
-
-
-# support tickets request class
-class SupportTicketRequest(BaseModel):
-    name: str = Field(..., max_length=255)
-    email: str = Field(..., max_length=255)
-    subject: str = Field(..., max_length=255)
-    message: str = Field(..., max_length=5000)
 
 
 # post endpoint for support tickets
@@ -309,32 +293,8 @@ async def record_analytics(short_url : str, ip_address : str, user_agent : str, 
                     asyncio.create_task(send_webhook(url_entry.webhook_url, webhook_payload))
 
 
-class PaymentOrderRequest(BaseModel):
-    plan: str # "startup" or "business"
-
-
-class PaymentVerifyRequest(BaseModel):
-    razorpay_order_id: str
-    razorpay_payment_id: str
-    razorpay_signature: str
-
-
-class CustomDomainRequest(BaseModel):
-    domain_name: str
-
-
 @app.post("/api/payments/create-order")
-async def create_payment_order(req_data: PaymentOrderRequest, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def create_payment_order(req_data: PaymentOrderRequest, user_id: int = Depends(get_required_user_id)):
         
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay client not configured")
@@ -359,17 +319,7 @@ async def create_payment_order(req_data: PaymentOrderRequest, request: Request):
 
 
 @app.post("/api/payments/verify")
-async def verify_payment(req_data: PaymentVerifyRequest, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(get_required_user_id)):
         
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay client not configured")
@@ -406,19 +356,7 @@ async def verify_payment(req_data: PaymentVerifyRequest, request: Request):
 
 # analytics endpoint for specific short url only accessed by owner
 @app.get("/api/analytics/{short_url}")
-async def get_url_analytics(short_url: str, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def get_url_analytics(short_url: str, user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
         # Check if URL exists and user owns it
@@ -544,15 +482,7 @@ async def get_url_analytics(short_url: str, request: Request):
 
 # dashboard endpoint for users who have account auth required
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        return RedirectResponse(url="/login")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-    except jwt.PyJWTError:
-        return RedirectResponse(url="/login")
+async def dashboard(user_id: Optional[int] = Depends(get_optional_user_id)):
     if not user_id:
         return RedirectResponse(url="/login")
         
@@ -562,22 +492,9 @@ async def dashboard(request: Request):
 
 # gives users recent clicks auth required
 @app.get("/api/user/recent-clicks")
-async def get_recent_clicks(request: Request, limit: int = 10):
+async def get_recent_clicks(limit: int = 10, user_id: int = Depends(get_required_user_id)):
     # Constrain limit to prevent database memory exhaustion
     limit = max(1, min(limit, 100))
-    
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
     with Session(engine) as db_session:
         user_links_stmt = select(urldata.short_url).where(urldata.user_id == user_id)
@@ -610,19 +527,7 @@ async def get_recent_clicks(request: Request, limit: int = 10):
 # --- Custom Domains Endpoints ---
 
 @app.get("/api/domains")
-async def get_user_domains(request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def get_user_domains(user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
         statement = select(CustomDomain).where(CustomDomain.user_id == user_id).order_by(CustomDomain.created_at.desc())
@@ -649,19 +554,7 @@ async def check_allowed_domain(domain: str):
 
 
 @app.post("/api/domains")
-async def create_user_domain(req_data: CustomDomainRequest, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def create_user_domain(req_data: CustomDomainRequest, user_id: int = Depends(get_required_user_id)):
 
     domain_name = req_data.domain_name.strip().lower()
     if not domain_name:
@@ -722,19 +615,7 @@ async def create_user_domain(req_data: CustomDomainRequest, request: Request):
 
 
 @app.post("/api/domains/{domain_id}/verify")
-async def verify_user_domain(domain_id: int, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def verify_user_domain(domain_id: int, user_id: int = Depends(get_required_user_id)):
 
     import socket
     with Session(engine) as db_session:
@@ -802,19 +683,7 @@ async def verify_user_domain(domain_id: int, request: Request):
 
 
 @app.delete("/api/domains/{domain_id}")
-async def delete_user_domain(domain_id: int, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def delete_user_domain(domain_id: int, user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
         domain = db_session.get(CustomDomain, domain_id)
@@ -834,19 +703,7 @@ async def delete_user_domain(domain_id: int, request: Request):
 
 # lists all the links of the user auth required
 @app.get("/api/user/links")
-async def get_user_links(request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def get_user_links(user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
         statement = select(urldata).where(urldata.user_id == user_id).order_by(urldata.created_at.desc())
@@ -873,23 +730,10 @@ async def get_user_links(request: Request):
 
 # export url analytics
 @app.get("/api/analytics/{short_url}/export")
-async def export_analytics_csv(short_url: str, request: Request):
+async def export_analytics_csv(short_url: str, user_id: int = Depends(get_required_user_id)):
     import csv
     import io
     from fastapi.responses import StreamingResponse
-    
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
     with Session(engine) as db_session:
         # Check if URL exists and user owns it
@@ -944,18 +788,8 @@ async def export_analytics_csv(short_url: str, request: Request):
         )
 
 @app.post("/api/user/toggle-tier")
-async def toggle_user_tier(request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-        
+async def toggle_user_tier(user_id: int = Depends(get_required_user_id)):
+    
     with Session(engine) as db_session:
         user = db_session.get(User, user_id)
         if not user:
@@ -984,19 +818,7 @@ async def toggle_user_tier(request: Request):
 
 # link editing endpoint (premium only)
 @app.patch("/api/links/{short_url}")
-async def edit_link(short_url: str, request: Request, edit_data: URLEditRequest):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def edit_link(short_url: str, edit_data: URLEditRequest, user_id: int = Depends(get_required_user_id)):
 
     from datetime import datetime, UTC
     with Session(engine) as db_session:
@@ -1130,19 +952,7 @@ async def edit_link(short_url: str, request: Request, edit_data: URLEditRequest)
 
 # link deletion endpoint
 @app.delete("/api/links/{short_url}")
-async def delete_link(short_url: str, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def delete_link(short_url: str, user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
         statement = select(urldata).where(urldata.short_url == short_url)
@@ -1173,17 +983,7 @@ async def delete_link(short_url: str, request: Request):
 
 # user account deletion endpoint
 @app.delete("/api/user/account")
-async def delete_user_account(request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Invalid session token")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+async def delete_user_account(user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
         # Fetch user details
@@ -1228,17 +1028,7 @@ async def delete_user_account(request: Request):
 
 
 @app.get("/analytics/{short_url}", response_class=HTMLResponse)
-async def analytics(short_url: str, request: Request):
-    token = request.cookies.get("session_token")
-    if not token:
-        return RedirectResponse(url="/login")
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-        user_id = payload.get("user_id")
-        if user_id is not None:
-            user_id = int(user_id)
-    except jwt.PyJWTError:
-        return RedirectResponse(url="/login")
+async def analytics(short_url: str, user_id: Optional[int] = Depends(get_optional_user_id)):
     if not user_id:
         return RedirectResponse(url="/login")
 
@@ -1519,7 +1309,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
 
 # main url shortening feature
 @app.post("/shorten")
-async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None):
+async def add_long_give_short(request: URLRequest, req: Request, background_tasks: BackgroundTasks, custom_alias: Optional[str] = None , exp_time: Optional[int] = None, user_id: Optional[int] = Depends(get_optional_user_id)):
     long_url = request.long_url
     
     if not await is_valid_url(long_url):
@@ -1539,17 +1329,7 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             )
         
     # Extract user_id if user is authenticated
-    user_id = None
     user_tier = "free"
-    token = req.cookies.get("session_token")
-    if token:
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
-            user_id = payload.get("user_id")
-            if user_id is not None:
-                user_id = int(user_id)
-        except jwt.PyJWTError:
-            pass
         
     from datetime import datetime, UTC, timedelta
 

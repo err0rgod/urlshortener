@@ -72,3 +72,58 @@ class CustomDomain(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", nullable=False)
     is_verified: bool = Field(default=False)
     cloudflare_id: Optional[str] = Field(default=None, nullable=True)
+
+
+from pydantic import BaseModel, Field
+
+class URLRequest(BaseModel):
+    long_url: str = Field(..., max_length=2048)
+    webhook_url: Optional[str] = Field(None, max_length=2048)
+    ios_url: Optional[str] = Field(None, max_length=2048)
+    android_url: Optional[str] = Field(None, max_length=2048)
+    password: Optional[str] = Field(None, max_length=255)
+    fallback_url: Optional[str] = Field(None, max_length=2048)
+    activation_time: Optional[str] = Field(None)
+    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
+    domain: Optional[str] = Field(None, max_length=255)
+
+
+class URLEditRequest(BaseModel):
+    long_url: Optional[str] = Field(None, max_length=2048)
+    webhook_url: Optional[str] = Field(None, max_length=2048)
+    ios_url: Optional[str] = Field(None, max_length=2048)
+    android_url: Optional[str] = Field(None, max_length=2048)
+    password: Optional[str] = Field(None, max_length=255)
+    fallback_url: Optional[str] = Field(None, max_length=2048)
+    activation_time: Optional[str] = Field(None)
+    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
+    exp_time: Optional[str] = Field(None)
+
+
+class QuoteRequest(BaseModel):
+    business_name: str = Field(..., max_length=255)
+    primary_contact: str = Field(..., max_length=255)
+    alternate_contact: Optional[str] = Field(None, max_length=255)
+    cloud_provider: Optional[str] = Field(None, max_length=50)
+    demand_desc: str = Field(..., max_length=5000)
+
+
+class SupportTicketRequest(BaseModel):
+    name: str = Field(..., max_length=255)
+    email: str = Field(..., max_length=255)
+    subject: str = Field(..., max_length=255)
+    message: str = Field(..., max_length=5000)
+
+
+class PaymentOrderRequest(BaseModel):
+    plan: str
+
+
+class PaymentVerifyRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+
+
+class CustomDomainRequest(BaseModel):
+    domain_name: str

@@ -10,9 +10,10 @@ We have implemented premium subscription features (passwords, custom fallback UR
 
 ### 1. Backend (Fully Implemented & Secured)
 All backend logic supporting premium capabilities and security validation is active:
-- **`backend/models.py`:** Removed the `unique=True` constraint from the `long_url` column in `urldata` table. Added the `CustomDomain` model to associate user domains.
-- **`backend/database.py`:** In `init_db()`, added automatic SQL code execution to safely drop the PostgreSQL index/constraint `urldata_long_url_key` if it exists.
+- **`backend/models.py`:** Consolidated all schemas and Pydantic request models (`URLRequest`, `URLEditRequest`, `QuoteRequest`, `SupportTicketRequest`, `PaymentOrderRequest`, `PaymentVerifyRequest`, `CustomDomainRequest`). Added custom domain metadata column to the `urldata` model.
+- **`backend/database.py`:** In `init_db()`, added automatic SQL code execution to safely drop the PostgreSQL index/constraint `urldata_long_url_key` if it exists, and migrate the new `domain` column.
 - **`backend/app.py`:**
+  - **FastAPI Dependency Injection Authentication:** Introduced clean auth helper dependencies (`get_optional_user_id` and `get_required_user_id`) to automatically handle cookie-based JWT decoding and validation. Refactored all `/api/` endpoints to use this middleware-style dependency injection.
   - **Custom Domain Routing (Cloudflare for SaaS):** Integrated `CloudflareSaaSManager` in [cloudflare_saas.py](file:///D:/urlshortener/backend/cloudflare_saas.py) to automatically register and remove custom hostnames via the Cloudflare API (`POST /zones/{zone_id}/custom_hostnames`). Enforced access constraints on link redirection, ensuring custom domain links are only resolvable through the selected domain or `flexurl.app` (not other custom domains).
   - **On-Demand TLS Helper Route:** Added `GET /api/domains/check-allowed` to verify custom domains against registered entries in PostgreSQL.
   - **Domain Registration Formats (Stored XSS Prevention):** Added strict regex validation in `POST /api/domains` to restrict domain names to valid DNS characters, blocking folder traversal paths and script injection tags.
