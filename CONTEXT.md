@@ -4,6 +4,7 @@
 
 1. **Custom Domain Redirection & SSL (Cloudflare for SaaS):**
    - Integrated automated Cloudflare for SaaS custom hostname registration in `POST /api/domains` to provision SSL/TLS certificates and manage edge routing.
+   - Enforced routing access constraints: custom domain links can only be resolved through their selected domain or `flexurl.app`, blocking resolution via another custom domain.
    - Cleans up custom hostname registration upon deletion inside `DELETE /api/domains/{domain_id}`.
    - Updated custom domain models and schemas to track active custom hostname IDs.
    - Set up the Let's Encrypt / Caddy check-allowed DNS validation route at `GET /api/domains/check-allowed`.
@@ -22,6 +23,7 @@
    - Connected form submissions to a backend `/api/support` endpoint which logs tickets to `support_tickets.json` and sends admin notification emails via the Resend API to `ADMIN_EMAIL`. Escaped all user inputs using `html.escape` to block HTML Injection in email clients.
    - Remapped the custom Enterprise Quotes page to `/quotes` (serving `contact.html` directly without redirects). Escaped all business profile inputs inside `quotation.py` to prevent HTML injection email vulnerabilities.
    - Linked to `/support`, `/quotes`, and `/documentation` from all template page headers and footers, removing old `API Keys` and `API Docs` placeholders.
+   - Updated the custom domains guide on [documentation.html](file:///D:/urlshortener/frontend/documentation.html) to detail the new strict routing access constraints.
    - Added regex-based domain format verification in `/api/domains` to prevent Stored XSS attacks inside the user dashboard.
 
 5. **Author Branding & Landing Page Updates:**

@@ -210,6 +210,18 @@
                         </p>
                     </div>
 
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-white dark:bg-slate-900 space-y-3">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">4. Domain Routing Constraints (Security & Isolation)</p>
+                        <p class="text-slate-500 leading-relaxed">
+                            To protect and isolate your marketing campaigns, FlexURL enforces strict routing constraints on all custom domain links:
+                        </p>
+                        <ul class="list-disc pl-5 text-slate-450 space-y-1">
+                            <li>A short link created under a specific custom domain (e.g., `links.mybrand.com/xyz`) is only accessible via that selected domain or the default fallback `flexurl.app/xyz`.</li>
+                            <li>Accessing the short code through other custom domains you own (e.g., `go.brand.io/xyz`) will return a 404 error.</li>
+                            <li>Standard links shortened under the default domain `flexurl.app` cannot be accessed using your custom domains.</li>
+                        </ul>
+                    </div>
+
                     <!-- Developer Setup Steps -->
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest pt-4">Server Administrator Configuration</h3>
 

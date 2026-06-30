@@ -39,6 +39,7 @@ class urldata(SQLModel, table=True):
     fallback_url: Optional[str] = Field(default=None)  # Premium: fallback destination URL after expiration
     activation_time: Optional[datetime] = Field(default=None)  # Premium: scheduled activation time
     custom_countdown_url: Optional[str] = Field(default=None)  # Premium: custom countdown destination URL
+    domain: Optional[str] = Field(default=None, nullable=True)  # Premium: selected custom domain for link
 
 class clicklog(SQLModel, table=True):
     """

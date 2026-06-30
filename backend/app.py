@@ -120,6 +120,7 @@ class URLRequest(BaseModel):
     fallback_url: Optional[str] = Field(None, max_length=2048)
     activation_time: Optional[str] = Field(None)
     custom_countdown_url: Optional[str] = Field(None, max_length=2048)
+    domain: Optional[str] = Field(None, max_length=255)
 
 
 class URLEditRequest(BaseModel):
@@ -1421,6 +1422,14 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             # Enforce that short code accessed via custom domain belongs to domain owner
             if domain_user_id is not None and url_entry.user_id != domain_user_id:
                 raise HTTPException(status_code=404, detail="Short URL not found on this domain")
+
+            # Enforce that short code accessed via custom domain matches the selected domain
+            if url_entry.domain and url_entry.domain != "flexurl.app":
+                if is_custom_domain and host != url_entry.domain:
+                    raise HTTPException(status_code=404, detail="Short URL not found on this domain")
+            else:
+                if is_custom_domain:
+                    raise HTTPException(status_code=404, detail="Short URL not found on this domain")
                 
             # 0. Premium Scheduled Activation check
             is_premium_owned = False
@@ -1667,19 +1676,32 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             salt = "flexurl_salt_secure_2026"
             password_hash = hashlib.sha256((request.password + salt).encode('utf-8')).hexdigest()
 
+        selected_domain = None
+        if request.domain and request.domain != "flexurl.app":
+            if not is_premium_user:
+                raise HTTPException(status_code=400, detail="Custom domain integration is a premium-only feature.")
+            with Session(engine) as db_session:
+                stmt = select(CustomDomain).where(CustomDomain.domain_name == request.domain).where(CustomDomain.user_id == user_id).where(CustomDomain.is_verified == True)
+                dom_entry = db_session.exec(stmt).first()
+                if not dom_entry:
+                    raise HTTPException(status_code=400, detail="Domain is either unverified or does not belong to you.")
+            selected_domain = request.domain
+
         if custom_alias:
             short_code = add_custom_url(
                 long_url, custom_alias, user_id=user_id, exp_time=computed_exp_time,
                 webhook_url=webhook_url, ios_url=ios_url, android_url=android_url,
                 password_hash=password_hash, fallback_url=fallback_url,
-                activation_time=activation_time, custom_countdown_url=custom_countdown_url
+                activation_time=activation_time, custom_countdown_url=custom_countdown_url,
+                domain=selected_domain
             )
         else:
             short_code = add_url(
                 long_url, user_id=user_id, exp_time=computed_exp_time,
                 webhook_url=webhook_url, ios_url=ios_url, android_url=android_url,
                 password_hash=password_hash, fallback_url=fallback_url,
-                activation_time=activation_time, custom_countdown_url=custom_countdown_url
+                activation_time=activation_time, custom_countdown_url=custom_countdown_url,
+                domain=selected_domain
             )
         if not short_code:
             raise HTTPException(status_code=500, detail="if this executes, the error is in short url.")
@@ -1693,9 +1715,12 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
         background_tasks.add_task(background_safe_browsing_check, short_code, long_url)
     else:
         raise HTTPException(status_code=500,detail="Invalid Shorten URL.")
-    # Construct the full short URL using the request base URL
-    base_url = str(req.base_url).rstrip("/")
-    full_short_url = f"{base_url}/{short_code}"
+    # Construct the full short URL using the request base URL or the custom domain
+    if selected_domain:
+        full_short_url = f"https://{selected_domain}/{short_code}"
+    else:
+        base_url = str(req.base_url).rstrip("/")
+        full_short_url = f"{base_url}/{short_code}"
     
     return {"short_url": full_short_url}
 

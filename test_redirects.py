@@ -488,6 +488,83 @@ class TestRedirects(unittest.TestCase):
         resp = self.client.post("/api/domains", json=payload)
         self.assertEqual(resp.status_code, 400)
 
+    def test_custom_domain_access_constraints(self):
+        # 1. Register and verify a custom domain for premium user
+        from models import CustomDomain, urldata
+        from sqlmodel import Session, select
+        from database import engine
+        
+        with Session(engine) as db_session:
+            dom = CustomDomain(domain_name="mybrand-links.com", user_id=self.premium_user.id, is_verified=True)
+            db_session.add(dom)
+            db_session.commit()
+            dom_id = dom.id
+
+        try:
+            # 2. Create a short link under this custom domain
+            import jwt
+            from app import JWT_SECRET_KEY
+            token = jwt.encode({"user_id": self.premium_user.id, "email": self.premium_user.email}, JWT_SECRET_KEY, algorithm="HS256")
+            self.client.cookies.set("session_token", token)
+
+            payload = {
+                "long_url": "https://google.com/test-domain-routing",
+                "domain": "mybrand-links.com"
+            }
+            resp = self.client.post("/shorten", json=payload)
+            self.assertEqual(resp.status_code, 200)
+            short_url_resp = resp.json()["short_url"]
+            short_code = short_url_resp.split("/")[-1]
+
+            # 3. Accessing via default flexurl.app should be allowed (returns 302)
+            resp = self.client.get(f"/{short_code}", headers={"host": "flexurl.app"}, follow_redirects=False)
+            self.assertEqual(resp.status_code, 302)
+
+            # 4. Accessing via correct custom domain should be allowed (returns 302)
+            resp = self.client.get(f"/{short_code}", headers={"host": "mybrand-links.com"}, follow_redirects=False)
+            self.assertEqual(resp.status_code, 302)
+
+            # 5. Accessing via incorrect custom domain should return 404
+            resp = self.client.get(f"/{short_code}", headers={"host": "another-brand.com"}, follow_redirects=False)
+            self.assertEqual(resp.status_code, 404)
+
+            # 6. Accessing default link (no domain) via custom domain should return 404
+            payload_default = {
+                "long_url": "https://google.com/test-default-routing"
+            }
+            resp_default = self.client.post("/shorten", json=payload_default)
+            self.assertEqual(resp_default.status_code, 200)
+            short_code_default = resp_default.json()["short_url"].split("/")[-1]
+
+            resp = self.client.get(f"/{short_code_default}", headers={"host": "mybrand-links.com"}, follow_redirects=False)
+            self.assertEqual(resp.status_code, 404)
+
+        finally:
+            with Session(engine) as db_session:
+                # Clean up custom domain
+                dom_entry = db_session.get(CustomDomain, dom_id)
+                if dom_entry:
+                    db_session.delete(dom_entry)
+                # Clean up clicklog references
+                stmt_clicks1 = select(clicklog).where(clicklog.short_url.in_(
+                    select(urldata.short_url).where(urldata.long_url == "https://google.com/test-domain-routing")
+                ))
+                for c in db_session.exec(stmt_clicks1).all():
+                    db_session.delete(c)
+                stmt_clicks2 = select(clicklog).where(clicklog.short_url.in_(
+                    select(urldata.short_url).where(urldata.long_url == "https://google.com/test-default-routing")
+                ))
+                for c in db_session.exec(stmt_clicks2).all():
+                    db_session.delete(c)
+                # Clean up links
+                stmt1 = select(urldata).where(urldata.long_url == "https://google.com/test-domain-routing")
+                for u in db_session.exec(stmt1).all():
+                    db_session.delete(u)
+                stmt2 = select(urldata).where(urldata.long_url == "https://google.com/test-default-routing")
+                for u in db_session.exec(stmt2).all():
+                    db_session.delete(u)
+                db_session.commit()
+
 if __name__ == "__main__":
     from unittest.mock import patch
     import unittest
