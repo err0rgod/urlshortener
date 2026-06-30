@@ -451,7 +451,12 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["status"], "success")
 
-    def test_create_custom_domain_validation(self):
+    @patch("app.CloudflareSaaSManager")
+    def test_create_custom_domain_validation(self, mock_cf):
+        mock_cf.return_value.register_custom_domain.return_value = {
+            "status": "success",
+            "hostname_id": "ch_test_123"
+        }
         import jwt
         from app import JWT_SECRET_KEY
         token = jwt.encode({"user_id": self.premium_user.id, "email": self.premium_user.email}, JWT_SECRET_KEY, algorithm="HS256")

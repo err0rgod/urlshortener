@@ -17,6 +17,7 @@ from validations import is_valid_url, check_safe_browsing, is_valid_custom_alias
 from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
+from cloudflare_saas import CloudflareSaaSManager
 from models import clicklog, urldata, User, CustomDomain
 from analytics_parser import parse_referer, parse_user_agent, get_ip_country, get_ip_location, check_is_bot
 from typing import Optional
@@ -693,11 +694,18 @@ async def create_user_domain(req_data: CustomDomainRequest, request: Request):
         if existing:
             raise HTTPException(status_code=400, detail="This domain has already been added")
 
+        # Register domain in Cloudflare
+        cf_manager = CloudflareSaaSManager()
+        cf_result = cf_manager.register_custom_domain(domain_name)
+        if cf_result.get("status") == "error":
+            raise HTTPException(status_code=400, detail=cf_result.get("message"))
+
         new_domain = CustomDomain(
             domain_name=domain_name,
             user_id=user_id,
             is_verified=False,
-            created_at=datetime.now(UTC).replace(tzinfo=None)
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            cloudflare_id=cf_result.get("hostname_id")
         )
         db_session.add(new_domain)
         db_session.commit()
@@ -707,7 +715,8 @@ async def create_user_domain(req_data: CustomDomainRequest, request: Request):
             "id": new_domain.id,
             "domain_name": new_domain.domain_name,
             "is_verified": new_domain.is_verified,
-            "created_at": new_domain.created_at.isoformat() if new_domain.created_at else None
+            "created_at": new_domain.created_at.isoformat() if new_domain.created_at else None,
+            "cloudflare_id": new_domain.cloudflare_id
         }
 
 
@@ -812,6 +821,10 @@ async def delete_user_domain(domain_id: int, request: Request):
             raise HTTPException(status_code=404, detail="Domain not found")
         if domain.user_id != user_id:
             raise HTTPException(status_code=403, detail="Forbidden")
+
+        if domain.cloudflare_id:
+            cf_manager = CloudflareSaaSManager()
+            cf_manager.remove_custom_domain(domain.cloudflare_id)
 
         db_session.delete(domain)
         db_session.commit()

@@ -1,7 +1,10 @@
 docs
 logo 
+fix multiple domain issue
 
 add optimizations from load test website 
+
+
 
 add turnstile and zerotrust on admin pages other cloud flare features 
 create web crawler for leads

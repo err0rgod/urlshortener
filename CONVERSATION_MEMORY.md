@@ -13,8 +13,8 @@ All backend logic supporting premium capabilities and security validation is act
 - **`backend/models.py`:** Removed the `unique=True` constraint from the `long_url` column in `urldata` table. Added the `CustomDomain` model to associate user domains.
 - **`backend/database.py`:** In `init_db()`, added automatic SQL code execution to safely drop the PostgreSQL index/constraint `urldata_long_url_key` if it exists.
 - **`backend/app.py`:**
-  - **Custom Domain Routing:** Implemented dynamic host-header lookup on `GET /{short_url}` redirection. FastAPI checks if the incoming host header is a registered custom domain, matches the link owner ID, and executes redirects securely.
-  - **On-Demand TLS Helper Route:** Added `GET /api/domains/check-allowed` to verify custom domains.
+  - **Custom Domain Routing (Cloudflare for SaaS):** Integrated `CloudflareSaaSManager` in [cloudflare_saas.py](file:///D:/urlshortener/backend/cloudflare_saas.py) to automatically register and remove custom hostnames via the Cloudflare API (`POST /zones/{zone_id}/custom_hostnames`). This automates SSL/TLS certificate provisioning and edge routing for users' branded domains.
+  - **On-Demand TLS Helper Route:** Added `GET /api/domains/check-allowed` to verify custom domains against registered entries in PostgreSQL.
   - **Domain Registration Formats (Stored XSS Prevention):** Added strict regex validation in `POST /api/domains` to restrict domain names to valid DNS characters, blocking folder traversal paths and script injection tags.
   - **Dynamic Redis Cache:** Premium links are marked in Redis as `"DYNAMIC"` to enforce DB-level redirect parameter checks.
   - **Support Ticketing API & UI:** Added a dedicated `/support` route serving a clean, user-friendly [support.html](file:///D:/urlshortener/frontend/support.html) ticket center. Handled query submissions via `POST /api/support` to save queries to `support_tickets.json` and dispatch email alerts to the admin's `ADMIN_EMAIL`. Escaped all user input values using `html.escape` to prevent HTML Injection/XSS in email clients.

@@ -25,6 +25,7 @@ def init_db():
             session.exec(text("ALTER TABLE urldata DROP CONSTRAINT IF EXISTS urldata_long_url_key;"))
             session.exec(text("ALTER TABLE urldata ADD COLUMN IF NOT EXISTS activation_time TIMESTAMP WITHOUT TIME ZONE;"))
             session.exec(text("ALTER TABLE urldata ADD COLUMN IF NOT EXISTS custom_countdown_url VARCHAR;"))
+            session.exec(text("ALTER TABLE custom_domains ADD COLUMN IF NOT EXISTS cloudflare_id VARCHAR;"))
             session.commit()
         except Exception:
             pass

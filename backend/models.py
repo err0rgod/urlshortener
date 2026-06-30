@@ -70,3 +70,4 @@ class CustomDomain(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
     user_id: int = Field(foreign_key="users.id", nullable=False)
     is_verified: bool = Field(default=False)
+    cloudflare_id: Optional[str] = Field(default=None, nullable=True)

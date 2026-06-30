@@ -2,9 +2,10 @@
 
 ## What We Did Today
 
-1. **Custom Domain Redirection:**
-   - Enabled dynamic custom domain redirection routing on `GET /{short_url}` in `app.py`.
-   - Verified domains immediately using host header validation checks, isolating ownership to prevent cross-user domain hijacks.
+1. **Custom Domain Redirection & SSL (Cloudflare for SaaS):**
+   - Integrated automated Cloudflare for SaaS custom hostname registration in `POST /api/domains` to provision SSL/TLS certificates and manage edge routing.
+   - Cleans up custom hostname registration upon deletion inside `DELETE /api/domains/{domain_id}`.
+   - Updated custom domain models and schemas to track active custom hostname IDs.
    - Set up the Let's Encrypt / Caddy check-allowed DNS validation route at `GET /api/domains/check-allowed`.
 
 2. **Cloudflare & Nginx Infrastructure:**
