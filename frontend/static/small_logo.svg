@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="23 23 160 160">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square -->
+  <rect x="28" y="28" width="150" height="150" rx="28" fill="none" stroke="url(#grad)" stroke-width="10"/>
+
+  <!-- Magnifying glass -->
+  <circle cx="102" cy="102" r="36" fill="none" stroke="url(#grad)" stroke-width="8"/>
+  <line x1="127" y1="127" x2="156" y2="156" stroke="url(#grad)" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Analytics bars -->
+  <rect x="88" y="104" width="8" height="18" rx="2" fill="url(#grad)"/>
+  <rect x="101" y="92" width="8" height="30" rx="2" fill="url(#grad)"/>
+  <rect x="114" y="78" width="8" height="44" rx="2" fill="url(#grad)"/>
+
+  <!-- Growth arrow -->
+  <path d="M128 58 L165 28" stroke="url(#grad)" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M165 28 L156 28 L164 37 Z" fill="url(#grad)"/>
+</svg>

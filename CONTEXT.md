@@ -41,6 +41,12 @@
    - Moved all request schemas and Pydantic models from `app.py` to `models.py`, making all schema definitions central and unified.
    - Replaced redundant JWT token decoding and cookie validation logic across endpoints with FastAPI dependency injection helpers (`get_optional_user_id` and `get_required_user_id`), significantly reducing boilerplate code.
 
+8. **Logo Types and Static Asset Integration:**
+   - Wired up the normal sized `logo.svg` across all 12 page headers (scaled to `h-12` inside an independent `w-48` container with `py-1.5 px-2` padding) and footers (scaled to `h-10`) with a custom CSS filter mapping monochrome in dark mode. Increased the header container width by 8% to match.
+   - Configured `small_logo.svg` as the canonical SVG favicon in `<head>` across all 13 system pages.
+   - Mounted `StaticFiles` in `app.py` to enable FastAPI local delivery of these SVG and video assets.
+   - Adjusted video blocks inside `index.html` to reference the new `/static/` subfolder locations.
+
 ---
 
 ## Current Status

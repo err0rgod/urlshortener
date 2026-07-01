@@ -87,6 +87,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory=os.path.join(FRONTEND_DIR, "static")), name="static")
+
 app.include_router(auth_router)
 
 def get_client_ip(request: Request) -> str:
@@ -161,13 +164,13 @@ async def security():
 @app.get("/sad_meme.mp4")
 async def sad_meme():
     from fastapi.responses import FileResponse
-    return FileResponse(os.path.join(FRONTEND_DIR, "sad_meme.mp4"), media_type="video/mp4")
+    return FileResponse(os.path.join(FRONTEND_DIR, "static", "sad_meme.mp4"), media_type="video/mp4")
 
 
 @app.get("/dancing_meme.mp4")
 async def dancing_meme():
     from fastapi.responses import FileResponse
-    return FileResponse(os.path.join(FRONTEND_DIR, "dancing_meme.mp4"), media_type="video/mp4")
+    return FileResponse(os.path.join(FRONTEND_DIR, "static", "dancing_meme.mp4"), media_type="video/mp4")
 
 
 # main website returns the index page
