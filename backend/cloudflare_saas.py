@@ -72,3 +72,30 @@ class CloudflareSaaSManager:
         except Exception as e:
             logger.error(f"Cloudflare deletion request failed: {e}")
             return False
+
+    def get_custom_domain_status(self, hostname_id: str) -> dict:
+        """
+        Retrieves the status of a custom hostname from Cloudflare.
+        """
+        if not CLOUDFLARE_API_TOKEN or not CLOUDFLARE_ZONE_ID or not hostname_id:
+            return {"status": "error", "message": "Cloudflare integration is not configured."}
+
+        try:
+            with httpx.Client() as client:
+                resp = client.get(f"{self.base_url}/{hostname_id}", headers=self.headers, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    result = data.get("result", {})
+                    return {
+                        "status": "success",
+                        "hostname_status": result.get("status"),
+                        "ssl_status": result.get("ssl", {}).get("status")
+                    }
+                else:
+                    errors = resp.json().get("errors", [])
+                    err_msg = errors[0]["message"] if errors else "Unknown error"
+                    logger.error(f"Failed to get custom domain status {hostname_id}: {resp.text}")
+                    return {"status": "error", "message": err_msg}
+        except Exception as e:
+            logger.error(f"Cloudflare status request failed: {e}")
+            return {"status": "error", "message": str(e)}

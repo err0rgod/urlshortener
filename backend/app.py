@@ -638,32 +638,45 @@ async def verify_user_domain(domain_id: int, user_id: int = Depends(get_required
 
         # Check DNS resolution
         is_verified = False
-        try:
-            domain_ip = socket.gethostbyname(domain.domain_name)
-            
-            main_ips = []
+
+        # 1. Check via Cloudflare Custom Hostname API
+        if domain.cloudflare_id:
             try:
-                import httpx
-                async with httpx.AsyncClient(timeout=2.0) as client:
-                    resp = await client.get("https://dns.google/resolve?name=flexurl.app")
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        answers = data.get("Answer", [])
-                        main_ips = [ans["data"] for ans in answers if ans.get("type") == 1]
+                cf_manager = CloudflareSaaSManager()
+                cf_status = cf_manager.get_custom_domain_status(domain.cloudflare_id)
+                if cf_status.get("status") == "success" and cf_status.get("hostname_status") == "active":
+                    is_verified = True
+            except Exception as e:
+                logger.error(f"Failed to check domain status via Cloudflare: {e}")
+
+        # 2. Fallback to local DNS resolution check if Cloudflare check was not conclusive
+        if not is_verified:
+            try:
+                domain_ip = socket.gethostbyname(domain.domain_name)
+                
+                main_ips = []
+                try:
+                    import httpx
+                    async with httpx.AsyncClient(timeout=2.0) as client:
+                        resp = await client.get("https://dns.google/resolve?name=flexurl.app")
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            answers = data.get("Answer", [])
+                            main_ips = [ans["data"] for ans in answers if ans.get("type") == 1]
+                except Exception:
+                    pass
+
+                if not main_ips:
+                    try:
+                        main_ips = [socket.gethostbyname("flexurl.app")]
+                    except Exception:
+                        main_ips = []
+
+                valid_ips = set(main_ips) | {"127.0.0.1", "localhost", "testserver"}
+                if domain_ip in valid_ips:
+                    is_verified = True
             except Exception:
                 pass
-
-            if not main_ips:
-                try:
-                    main_ips = [socket.gethostbyname("flexurl.app")]
-                except Exception:
-                    main_ips = []
-
-            valid_ips = set(main_ips) | {"127.0.0.1", "localhost", "testserver"}
-            if domain_ip in valid_ips:
-                is_verified = True
-        except Exception:
-            pass
 
         if is_verified:
             domain.is_verified = True
