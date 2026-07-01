@@ -3,17 +3,9 @@ from datetime import datetime , UTC, timedelta
 from base62 import encode_base62
 from models import urldata
 from database import add_to_db, get_long_url, is_long_url_exists, mark_url_banned, is_alias_exists
-import redis
 from logger import logger
 # from validations import check_safe_browsing
-
-redis_client = redis.Redis(
-    host="127.0.0.1",
-    port=6379,
-    decode_responses=True,
-    socket_connect_timeout=0.1,
-    socket_timeout=0.1
-)
+from redis_client import redis_client
 
 
 

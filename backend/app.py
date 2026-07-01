@@ -57,6 +57,28 @@ def get_required_user_id(request: Request) -> int:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return user_id
 
+
+def get_user_tier(user_id: int, db_session: Session) -> str:
+    redis_key = f"user_tier:{user_id}"
+    try:
+        from short_url_gen import redis_client
+        cached_tier = redis_client.get(redis_key)
+        if cached_tier:
+            return cached_tier
+    except Exception:
+        pass
+
+    user = db_session.get(User, user_id)
+    tier = user.tier if user else "free"
+
+    try:
+        from short_url_gen import redis_client
+        redis_client.set(redis_key, tier, ex=3600)  # cache for 1 hour
+    except Exception:
+        pass
+
+    return tier
+
 import razorpay
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
@@ -353,6 +375,11 @@ async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
+        try:
+            from short_url_gen import redis_client
+            redis_client.delete(f"user_tier:{user_id}")
+        except Exception:
+            pass
         
     return {"status": "success", "message": f"Successfully upgraded to {user.tier}!"}
 
@@ -714,6 +741,11 @@ async def delete_user_domain(domain_id: int, user_id: int = Depends(get_required
 
         db_session.delete(domain)
         db_session.commit()
+        try:
+            from short_url_gen import redis_client
+            redis_client.delete(f"dom_owner:{domain.domain_name}")
+        except Exception:
+            pass
         return {"status": "success", "message": "Domain removed"}
 
 
@@ -829,6 +861,11 @@ async def toggle_user_tier(user_id: int = Depends(get_required_user_id)):
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
+        try:
+            from short_url_gen import redis_client
+            redis_client.delete(f"user_tier:{user_id}")
+        except Exception:
+            pass
         return {"status": "success", "tier": user.tier}
 
 
@@ -1194,12 +1231,32 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
 
     domain_user_id = None
     if is_custom_domain:
-        with Session(engine) as db_session:
-            dom_stmt = select(CustomDomain).where(CustomDomain.domain_name == host)
-            dom_entry = db_session.exec(dom_stmt).first()
-            if not dom_entry:
+        redis_key = f"dom_owner:{host}"
+        try:
+            from short_url_gen import redis_client
+            cached_val = redis_client.get(redis_key)
+        except Exception:
+            cached_val = None
+
+        if cached_val is not None:
+            if cached_val == "NOT_FOUND":
                 raise HTTPException(status_code=404, detail="Custom domain not registered")
-            domain_user_id = dom_entry.user_id
+            domain_user_id = int(cached_val)
+        else:
+            with Session(engine) as db_session:
+                dom_stmt = select(CustomDomain).where(CustomDomain.domain_name == host)
+                dom_entry = db_session.exec(dom_stmt).first()
+                if not dom_entry:
+                    try:
+                        redis_client.set(redis_key, "NOT_FOUND", ex=300)
+                    except Exception:
+                        pass
+                    raise HTTPException(status_code=404, detail="Custom domain not registered")
+                domain_user_id = dom_entry.user_id
+                try:
+                    redis_client.set(redis_key, str(domain_user_id), ex=3600)
+                except Exception:
+                    pass
 
     try:
         long_url = serve_url(short_url)
@@ -1239,9 +1296,10 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                 
             # 0. Premium Scheduled Activation check
             is_premium_owned = False
+            user_tier = "free"
             if url_entry.user_id:
-                user = db_session.get(User, url_entry.user_id)
-                if user and user.tier in ("premium", "startup", "business"):
+                user_tier = get_user_tier(url_entry.user_id, db_session)
+                if user_tier in ("premium", "startup", "business"):
                     is_premium_owned = True
 
             if is_premium_owned and url_entry.activation_time:
@@ -1268,8 +1326,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             if is_expired:
                 # Custom fallback redirect
                 if url_entry.fallback_url and url_entry.user_id:
-                    user = db_session.get(User, url_entry.user_id)
-                    if user and user.tier in ("premium", "startup", "business"):
+                    if user_tier in ("premium", "startup", "business"):
                         return RedirectResponse(url_entry.fallback_url, status_code=302)
                 
                 with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
@@ -1282,8 +1339,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                     
             # 3. Password check
             if url_entry.password_hash and url_entry.user_id:
-                user = db_session.get(User, url_entry.user_id)
-                if user and user.tier in ("premium", "startup", "business"):
+                if user_tier in ("premium", "startup", "business"):
                     cookie_name = f"auth_link_{short_url}"
                     auth_cookie = request.cookies.get(cookie_name)
                     if auth_cookie != url_entry.password_hash:
@@ -1293,8 +1349,7 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
             # 4. OS targeting
             target_url = url_entry.long_url
             if url_entry.user_id:
-                user = db_session.get(User, url_entry.user_id)
-                if user and user.tier in ("premium", "startup", "business"):
+                if user_tier in ("premium", "startup", "business"):
                     user_agent = request.headers.get("user-agent", "").lower()
                     if "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent:
                         if url_entry.ios_url:

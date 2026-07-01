@@ -1,6 +1,4 @@
 docs
-logo 
-fix multiple domain issue
 
 add optimizations from load test website 
 

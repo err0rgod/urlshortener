@@ -10,7 +10,13 @@ load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH")
 
-engine = create_engine(DB_PATH)
+engine = create_engine(
+    DB_PATH,
+    pool_size=20,
+    max_overflow=10,
+    pool_recycle=1800,
+    pool_pre_ping=True
+)
 
 def init_db():
     """
