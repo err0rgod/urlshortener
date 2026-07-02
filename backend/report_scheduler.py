@@ -5,7 +5,7 @@ import httpx
 from datetime import UTC, timedelta
 from sqlmodel import Session, select, func
 from database import engine
-from models import clicklog, urldata
+from models import clicklog, urldata, Subscription, User
 from short_url_gen import redis_client
 from logger import logger, log_file
 
@@ -164,6 +164,140 @@ async def generate_and_send_report():
     except Exception as e:
         logger.error(f"Failed to dispatch daily executive report email via Resend API: {e}")
 
+
+async def send_dunning_email(email: str, subject: str, html_body: str):
+    if not RESEND_API_KEY:
+        logger.warning(f"RESEND_API_KEY is not defined in the environment. Skipping email dispatch to {email}.")
+        return
+
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "from": "FlexURL Subscriptions <onboarding@resend.dev>",
+        "to": [email],
+        "subject": subject,
+        "html": html_body
+    }
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, headers=headers, json=payload, timeout=10)
+            resp.raise_for_status()
+        logger.info(f"Dunning email '{subject}' dispatched to {email} successfully.")
+    except Exception as e:
+        logger.error(f"Failed to dispatch dunning email to {email}: {e}")
+
+
+async def process_subscription_dunning_checks(now_utc: datetime.datetime):
+    logger.info("Executing daily subscription dunning and expiration checks...")
+    now_naive = now_utc.replace(tzinfo=None)
+    
+    with Session(engine) as session:
+        statement = select(Subscription).where(Subscription.tier != "free")
+        subscriptions = session.exec(statement).all()
+        
+        for sub in subscriptions:
+            user = session.get(User, sub.user_id)
+            if not user:
+                continue
+                
+            expires_at = sub.current_period_end.replace(tzinfo=None) if sub.current_period_end.tzinfo else sub.current_period_end
+            
+            # 1. Expiring Soon Warning (5 days left)
+            if expires_at > now_naive:
+                days_left = (expires_at - now_naive).days
+                if days_left <= 5 and not sub.dunning_warn_sent:
+                    subject = f"Your FlexURL plan expires in {days_left} days"
+                    html_content = f"""
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 550px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                        <div style="text-align: center; margin-bottom: 24px;">
+                            <span style="background-color: #fffbeb; color: #d97706; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 12px; border-radius: 9999px;">Subscription Warning</span>
+                        </div>
+                        <h2 style="color: #1e293b; font-size: 18px; font-weight: 800; text-align: center; margin-top: 0;">Your FlexURL subscription is expiring soon</h2>
+                        <p style="color: #475569; font-size: 13px; line-height: 1.6; margin-top: 16px; text-align: center;">
+                            Your premium subscription ({sub.tier.upper()}) will expire in {days_left} days. To ensure uninterrupted access to custom domains, password-protected redirects, and detailed analytics, please renew your subscription.
+                        </p>
+                        <div style="text-align: center; margin: 28px 0;">
+                            <a href="https://flexurl.app/dashboard" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block;">Renew Subscription</a>
+                        </div>
+                        <p style="color: #64748b; font-size: 11px; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 24px;">
+                            If you have already renewed, please ignore this email.
+                        </p>
+                    </div>
+                    """
+                    await send_dunning_email(user.email, subject, html_content)
+                    sub.dunning_warn_sent = True
+                    session.add(sub)
+                    
+            # 2. Expired & Relaxation Started (expired today / now >= expires_at)
+            elif now_naive >= expires_at and sub.status == "active":
+                sub.status = "relaxation"
+                subject = "Your FlexURL subscription has expired - Grace Period Active"
+                html_content = """
+                <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 550px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <span style="background-color: #fef2f2; color: #dc2626; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 12px; border-radius: 9999px;">Grace Period Active</span>
+                    </div>
+                    <h2 style="color: #1e293b; font-size: 18px; font-weight: 800; text-align: center; margin-top: 0;">Your plan has expired</h2>
+                    <p style="color: #475569; font-size: 13px; line-height: 1.6; margin-top: 16px; text-align: center;">
+                        Your premium plan has expired. We have automatically moved your links to a 7-day relaxation grace period to keep them working. However, management options (creating links, viewing analytics, custom domains editing) are now restricted.
+                    </p>
+                    <p style="color: #475569; font-size: 13px; line-height: 1.6; text-align: center; font-weight: bold;">
+                        Upgrade in the next 7 days to restore full access and prevent links and domains from being locked.
+                    </p>
+                    <div style="text-align: center; margin: 28px 0;">
+                        <a href="https://flexurl.app/dashboard" style="background-color: #dc2626; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block;">Restore Plan</a>
+                    </div>
+                </div>
+                """
+                await send_dunning_email(user.email, subject, html_content)
+                sub.dunning_expired_sent = True
+                
+                try:
+                    redis_client.delete(f"user_tier:{user.id}")
+                except Exception:
+                    pass
+                session.add(sub)
+                
+            # 3. Relaxation Ended & Downgraded (now >= expires_at + 7 days)
+            elif now_naive >= (expires_at + timedelta(days=7)) and sub.status == "relaxation":
+                sub.status = "expired"
+                sub.tier = "free"
+                user.tier = "free"
+                
+                subject = "Your FlexURL subscription has been downgraded"
+                html_content = """
+                <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 550px; margin: auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff;">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <span style="background-color: #f1f5f9; color: #64748b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 12px; border-radius: 9999px;">Downgraded</span>
+                    </div>
+                    <h2 style="color: #1e293b; font-size: 18px; font-weight: 800; text-align: center; margin-top: 0;">Grace period ended: Account Downgraded</h2>
+                    <p style="color: #475569; font-size: 13px; line-height: 1.6; margin-top: 16px; text-align: center;">
+                        The 7-day grace period for your subscription has ended. Your account has been downgraded to the Free Tier.
+                    </p>
+                    <p style="color: #475569; font-size: 13px; line-height: 1.6; text-align: center;">
+                        Your custom domains and advanced links have been locked. They are not deleted and your data remains safe, but they are disabled in your workspace. You can restore access immediately by upgrading.
+                    </p>
+                    <div style="text-align: center; margin: 28px 0;">
+                        <a href="https://flexurl.app/dashboard" style="background-color: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block;">Upgrade Now</a>
+                    </div>
+                </div>
+                """
+                await send_dunning_email(user.email, subject, html_content)
+                sub.dunning_ended_sent = True
+                
+                try:
+                    redis_client.delete(f"user_tier:{user.id}")
+                except Exception:
+                    pass
+                session.add(sub)
+                session.add(user)
+                
+        session.commit()
+
+
 async def daily_report_scheduler_loop():
     """
     Runs an infinite async loop that checks the time every 15 minutes.
@@ -171,15 +305,12 @@ async def daily_report_scheduler_loop():
     """
     logger.info("Starting daily executive report background scheduler loop...")
     while True:
-        # Check every 15 minutes
         await asyncio.sleep(900)
         try:
             now = datetime.datetime.now(datetime.timezone.utc)
-            # Run at midnight (during the first hour: 00:00 - 00:59 UTC)
             if now.hour == 0:
                 current_date = now.strftime("%Y-%m-%d")
                 
-                # Check Redis to prevent duplicate reports
                 sent_today = False
                 try:
                     last_sent = redis_client.get("daily_report_last_sent")
@@ -198,13 +329,12 @@ async def daily_report_scheduler_loop():
                                 
                 if not sent_today:
                     await generate_and_send_report()
+                    await process_subscription_dunning_checks(now)
                     
-                    # Mark as sent in Redis
                     try:
                         redis_client.set("daily_report_last_sent", current_date)
                     except Exception:
                         pass
-                    # Mark as sent in fallback local file
                     try:
                         marker_file = os.path.join(os.path.dirname(log_file), "daily_report_last_sent.txt")
                         with open(marker_file, "w") as f:

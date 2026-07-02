@@ -68,8 +68,57 @@ def get_user_tier(user_id: int, db_session: Session) -> str:
     except Exception:
         pass
 
-    user = db_session.get(User, user_id)
-    tier = user.tier if user else "free"
+    from models import Subscription
+    from datetime import datetime, UTC
+    now = datetime.now(UTC).replace(tzinfo=None)
+
+    statement = select(Subscription).where(Subscription.user_id == user_id)
+    sub = db_session.exec(statement).first()
+
+    if not sub:
+        user = db_session.get(User, user_id)
+        if not user:
+            return "free"
+        
+        sub = Subscription(
+            user_id=user.id,
+            tier=user.tier,
+            current_period_start=user.created_at or now,
+            current_period_end=user.plan_expires_at if user.plan_expires_at else now,
+            relaxation_days_remaining=user.relaxation_days_remaining or 7,
+            status="active" if (user.plan_expires_at and user.plan_expires_at > now) else "expired"
+        )
+        if not user.plan_expires_at:
+            sub.tier = "free"
+            sub.status = "expired"
+        try:
+            db_session.add(sub)
+            db_session.commit()
+            db_session.refresh(sub)
+        except Exception:
+            pass
+
+    if sub.tier == "free":
+        return "free"
+
+    plan_expires = sub.current_period_end.replace(tzinfo=None) if sub.current_period_end.tzinfo else sub.current_period_end
+    
+    tier = sub.tier
+    if now >= plan_expires:
+        days_since_expiry = (now - plan_expires).days
+        relaxation_remaining = sub.relaxation_days_remaining - days_since_expiry
+        if relaxation_remaining <= 0 and sub.status != "expired":
+            try:
+                sub.status = "expired"
+                user = db_session.get(User, user_id)
+                if user:
+                    user.tier = "free"
+                    db_session.add(user)
+                db_session.add(sub)
+                db_session.commit()
+            except Exception:
+                pass
+        tier = "free"
 
     try:
         from short_url_gen import redis_client
@@ -371,7 +420,41 @@ async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(
         except Exception:
             amount = 159900
             
-        user.tier = "business" if amount == 349900 else "startup"
+        target_tier = "business" if amount == 349900 else "startup"
+        user.tier = target_tier
+        
+        from models import Subscription
+        statement = select(Subscription).where(Subscription.user_id == user_id)
+        sub = db_session.exec(statement).first()
+        
+        from datetime import datetime, UTC, timedelta
+        now = datetime.now(UTC).replace(tzinfo=None)
+        
+        if not sub:
+            sub = Subscription(
+                user_id=user_id,
+                tier=target_tier,
+                current_period_start=now,
+                current_period_end=now + timedelta(days=30),
+                relaxation_days_remaining=7,
+                status="active"
+            )
+        else:
+            sub.tier = target_tier
+            sub.status = "active"
+            sub.relaxation_days_remaining = 7
+            sub.dunning_warn_sent = False
+            sub.dunning_expired_sent = False
+            sub.dunning_ended_sent = False
+            if sub.current_period_end and sub.current_period_end > now:
+                sub.current_period_end = sub.current_period_end + timedelta(days=30)
+            else:
+                sub.current_period_end = now + timedelta(days=30)
+                
+        user.plan_expires_at = sub.current_period_end
+        user.relaxation_days_remaining = 7
+        
+        db_session.add(sub)
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
@@ -398,8 +481,8 @@ async def get_url_analytics(short_url: str, user_id: int = Depends(get_required_
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Check if user is premium
-        user = db_session.get(User, user_id)
-        if not user or user.tier not in ("premium", "startup", "business"):
+        tier = get_user_tier(user_id, db_session)
+        if tier not in ("premium", "startup", "business"):
             raise HTTPException(
                 status_code=403, 
                 detail="Analytics are a premium feature. Please upgrade your subscription."
@@ -560,6 +643,9 @@ async def get_recent_clicks(limit: int = 10, user_id: int = Depends(get_required
 async def get_user_domains(user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
+        tier = get_user_tier(user_id, db_session)
+        is_locked = (tier == "free")
+            
         statement = select(CustomDomain).where(CustomDomain.user_id == user_id).order_by(CustomDomain.created_at.desc())
         domains = db_session.exec(statement).all()
         return [
@@ -567,7 +653,8 @@ async def get_user_domains(user_id: int = Depends(get_required_user_id)):
                 "id": dom.id,
                 "domain_name": dom.domain_name,
                 "is_verified": dom.is_verified,
-                "created_at": dom.created_at.isoformat() if dom.created_at else None
+                "created_at": dom.created_at.isoformat() if dom.created_at else None,
+                "is_locked": is_locked
             }
             for dom in domains
         ]
@@ -600,10 +687,11 @@ async def create_user_domain(req_data: CustomDomainRequest, user_id: int = Depen
             raise HTTPException(status_code=404, detail="User not found")
 
         # Determine limits
-        if user.tier not in ("premium", "startup", "business"):
+        tier = get_user_tier(user_id, db_session)
+        if tier not in ("premium", "startup", "business"):
             raise HTTPException(status_code=403, detail="Upgrade to premium to integrate custom domains")
 
-        limit = 1 if user.tier == "startup" else 5
+        limit = 1 if tier == "startup" else 5
 
         # Check current domain count
         count_statement = select(func.count(CustomDomain.id)).where(CustomDomain.user_id == user_id)
@@ -754,18 +842,33 @@ async def delete_user_domain(domain_id: int, user_id: int = Depends(get_required
 async def get_user_links(user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
+        user = db_session.get(User, user_id)
+        tier = get_user_tier(user_id, db_session)
+        
         statement = select(urldata).where(urldata.user_id == user_id).order_by(urldata.created_at.desc())
         links = db_session.exec(statement).all()
         
+        from datetime import timedelta
+        
         result = []
         for link in links:
+            exp_time_str = None
+            if link.exp_time:
+                exp_time_str = link.exp_time.isoformat()
+            elif tier == "free" and user and user.plan_expires_at:
+                plan_expires = user.plan_expires_at.replace(tzinfo=None) if user.plan_expires_at.tzinfo else user.plan_expires_at
+                link_created = link.created_at.replace(tzinfo=None) if link.created_at.tzinfo else link.created_at
+                if link_created < plan_expires:
+                    virtual_exp = link_created + timedelta(days=730)
+                    exp_time_str = virtual_exp.isoformat()
+                    
             result.append({
                 "short_url": link.short_url,
                 "long_url": link.long_url,
                 "created_at": link.created_at.isoformat() if link.created_at else None,
                 "click_count": link.click_count,
                 "is_banned": link.is_banned,
-                "exp_time": link.exp_time.isoformat() if link.exp_time else None,
+                "exp_time": exp_time_str,
                 "webhook_url": link.webhook_url,
                 "ios_url": link.ios_url,
                 "android_url": link.android_url,
@@ -793,8 +896,8 @@ async def export_analytics_csv(short_url: str, user_id: int = Depends(get_requir
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Verify user has premium access
-        user = db_session.get(User, user_id)
-        if not user or user.tier not in ("premium", "startup", "business"):
+        tier = get_user_tier(user_id, db_session)
+        if tier not in ("premium", "startup", "business"):
             raise HTTPException(status_code=403, detail="CSV export is a Premium feature")
 
         # Fetch click log entries sorted by click date
@@ -852,12 +955,61 @@ async def toggle_user_tier(user_id: int = Depends(get_required_user_id)):
             )
         
         # Toggle tier
+        from datetime import datetime, UTC, timedelta
+        from models import Subscription
+        now = datetime.now(UTC).replace(tzinfo=None)
+        
+        statement = select(Subscription).where(Subscription.user_id == user_id)
+        sub = db_session.exec(statement).first()
+        
         if user.tier == "free":
             user.tier = "startup"
+            if not sub:
+                sub = Subscription(
+                    user_id=user_id,
+                    tier="startup",
+                    current_period_start=now,
+                    current_period_end=now + timedelta(days=30),
+                    relaxation_days_remaining=7,
+                    status="active"
+                )
+            else:
+                sub.tier = "startup"
+                sub.status = "active"
+                sub.current_period_end = now + timedelta(days=30)
+                sub.relaxation_days_remaining = 7
         elif user.tier == "startup":
             user.tier = "business"
+            if not sub:
+                sub = Subscription(
+                    user_id=user_id,
+                    tier="business",
+                    current_period_start=now,
+                    current_period_end=now + timedelta(days=30),
+                    relaxation_days_remaining=7,
+                    status="active"
+                )
+            else:
+                sub.tier = "business"
+                sub.status = "active"
+                if sub.current_period_end and sub.current_period_end > now:
+                    sub.current_period_end = sub.current_period_end + timedelta(days=30)
+                else:
+                    sub.current_period_end = now + timedelta(days=30)
+                sub.relaxation_days_remaining = 7
         else:
             user.tier = "free"
+            if sub:
+                sub.tier = "free"
+                sub.status = "expired"
+                sub.current_period_end = now
+                sub.relaxation_days_remaining = 0
+                
+        user.plan_expires_at = sub.current_period_end if sub else None
+        user.relaxation_days_remaining = sub.relaxation_days_remaining if sub else 7
+        
+        if sub:
+            db_session.add(sub)
         db_session.add(user)
         db_session.commit()
         db_session.refresh(user)
@@ -1095,8 +1247,7 @@ async def analytics(short_url: str, user_id: Optional[int] = Depends(get_optiona
             raise HTTPException(status_code=403, detail="Forbidden")
 
         # Check if user is premium
-        user = db_session.get(User, user_id)
-        is_premium = (user.tier in ("premium", "startup", "business")) if user else False
+        is_premium = get_user_tier(user_id, db_session) in ("premium", "startup", "business")
 
         by_date = []
         by_browser = []
@@ -1154,7 +1305,7 @@ async def analytics(short_url: str, user_id: Optional[int] = Depends(get_optiona
 
 
         # User premium state check
-        is_premium = (user.tier in ("premium", "startup", "business")) if user else False
+        is_premium = get_user_tier(user_id, db_session) in ("premium", "startup", "business")
 
         by_city = []
         bot_clicks = 0

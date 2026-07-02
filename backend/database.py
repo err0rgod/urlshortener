@@ -33,6 +33,22 @@ def init_db():
             session.exec(text("ALTER TABLE urldata ADD COLUMN IF NOT EXISTS custom_countdown_url VARCHAR;"))
             session.exec(text("ALTER TABLE urldata ADD COLUMN IF NOT EXISTS domain VARCHAR;"))
             session.exec(text("ALTER TABLE custom_domains ADD COLUMN IF NOT EXISTS cloudflare_id VARCHAR;"))
+            session.exec(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP WITHOUT TIME ZONE;"))
+            session.exec(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS relaxation_days_remaining INTEGER DEFAULT 7;"))
+            session.exec(text("""
+                CREATE TABLE IF NOT EXISTS subscriptions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER UNIQUE REFERENCES users(id),
+                    tier VARCHAR DEFAULT 'free',
+                    status VARCHAR DEFAULT 'active',
+                    current_period_start TIMESTAMP WITHOUT TIME ZONE,
+                    current_period_end TIMESTAMP WITHOUT TIME ZONE,
+                    relaxation_days_remaining INTEGER DEFAULT 7,
+                    dunning_warn_sent BOOLEAN DEFAULT FALSE,
+                    dunning_expired_sent BOOLEAN DEFAULT FALSE,
+                    dunning_ended_sent BOOLEAN DEFAULT FALSE
+                );
+            """))
             session.commit()
         except Exception:
             pass

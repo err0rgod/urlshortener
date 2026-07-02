@@ -1,5 +1,10 @@
 docs
 
+check how subscriptions are handled 
+add numbers in website and features from .link website 
+fix mobile UI 
+test webhook and other premium features
+add api and in app shortening 
 add optimizations from load test website 
 
 

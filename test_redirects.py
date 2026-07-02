@@ -500,6 +500,10 @@ class TestRedirects(unittest.TestCase):
             db_session.commit()
             dom_id = dom.id
 
+        # Clear any stale test cache for these domains
+        redis_client.delete("dom_owner:mybrand-links.com")
+        redis_client.delete("dom_owner:another-brand.com")
+
         try:
             # 2. Create a short link under this custom domain
             import jwt
@@ -564,6 +568,10 @@ class TestRedirects(unittest.TestCase):
                 for u in db_session.exec(stmt2).all():
                     db_session.delete(u)
                 db_session.commit()
+            
+            # Clear test cache keys after execution
+            redis_client.delete("dom_owner:mybrand-links.com")
+            redis_client.delete("dom_owner:another-brand.com")
 
 if __name__ == "__main__":
     from unittest.mock import patch

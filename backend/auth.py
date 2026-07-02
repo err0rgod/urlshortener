@@ -122,7 +122,7 @@ async def create_session(data: SessionRequest):
         httponly=True,
         max_age=604800,
         samesite="lax",
-        secure=False
+        secure=True
     )
     return json_response
 
@@ -132,6 +132,84 @@ async def logout():
     response = RedirectResponse(url="/")
     response.delete_cookie(key="session_token")
     return response
+
+
+def get_subscription_details(user: User) -> dict:
+    """
+    Computes effective tier and subscription warnings dynamically.
+    Heals/seeds the subscription table from legacy User fields if missing.
+    """
+    from sqlmodel import Session, select
+    from database import engine
+    from models import Subscription
+    from datetime import datetime, UTC
+    
+    now = datetime.now(UTC).replace(tzinfo=None)
+    
+    with Session(engine) as session:
+        statement = select(Subscription).where(Subscription.user_id == user.id)
+        sub = session.exec(statement).first()
+        
+        # Self-healing migration
+        if not sub:
+            sub = Subscription(
+                user_id=user.id,
+                tier=user.tier,
+                current_period_start=user.created_at or now,
+                current_period_end=user.plan_expires_at if user.plan_expires_at else now,
+                relaxation_days_remaining=user.relaxation_days_remaining or 7,
+                status="active" if (user.plan_expires_at and user.plan_expires_at > now) else "expired"
+            )
+            if not user.plan_expires_at:
+                sub.tier = "free"
+                sub.status = "expired"
+            session.add(sub)
+            session.commit()
+            session.refresh(sub)
+            
+        if sub.tier == "free":
+            return {
+                "status": "none",
+                "effective_tier": "free",
+                "days_remaining": 0,
+                "relaxation_remaining": 0,
+                "plan_expires_at": None
+            }
+
+        plan_expires_at = sub.current_period_end.replace(tzinfo=None) if sub.current_period_end.tzinfo else sub.current_period_end
+
+        if now < plan_expires_at:
+            delta = plan_expires_at - now
+            days_remaining = int(delta.total_seconds() / 86400) + (1 if delta.total_seconds() % 86400 > 0 else 0)
+            status = "expiring_soon" if days_remaining <= 5 else "active"
+            return {
+                "status": status,
+                "effective_tier": sub.tier,
+                "days_remaining": max(0, days_remaining),
+                "relaxation_remaining": sub.relaxation_days_remaining,
+                "plan_expires_at": plan_expires_at.isoformat()
+            }
+        else:
+            delta_expiry = now - plan_expires_at
+            days_since_expiry = int(delta_expiry.total_seconds() / 86400)
+            relaxation_remaining = max(0, sub.relaxation_days_remaining - days_since_expiry)
+            
+            if relaxation_remaining > 0:
+                return {
+                    "status": "relaxation",
+                    "effective_tier": "free",
+                    "days_remaining": 0,
+                    "relaxation_remaining": relaxation_remaining,
+                    "plan_expires_at": plan_expires_at.isoformat()
+                }
+            else:
+                return {
+                    "status": "expired",
+                    "effective_tier": "free",
+                    "days_remaining": 0,
+                    "relaxation_remaining": 0,
+                    "plan_expires_at": plan_expires_at.isoformat()
+                }
 
 
 @router.get("/auth/me")
@@ -150,14 +228,19 @@ async def get_me(request: Request):
         if not user:
             return {"logged_in": False}
         
+        sub_details = get_subscription_details(user)
         return {
             "logged_in": True,
             "user" : {
                 "id" : user.id,
                 "email" : user.email,
                 "full_name" : user.full_name,
-                "tier": user.tier,
-                "created_at": user.created_at.isoformat() if user.created_at else None
+                "tier": sub_details["effective_tier"],
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "subscription_status": sub_details["status"],
+                "days_remaining": sub_details["days_remaining"],
+                "relaxation_remaining": sub_details["relaxation_remaining"],
+                "plan_expires_at": sub_details["plan_expires_at"]
             }
         }
     except jwt.PyJWTError:

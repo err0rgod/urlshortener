@@ -17,6 +17,8 @@ class User(SQLModel, table=True):
     oauth_id: str  # Remote UID from the OAuth provider (e.g., Firebase UID)
     created_at: datetime
     tier: str = Field(default="free")  # Account tier: 'free' or 'premium'
+    plan_expires_at: Optional[datetime] = Field(default=None, nullable=True)
+    relaxation_days_remaining: int = Field(default=7, nullable=False)
 
 class urldata(SQLModel, table=True):
     """
@@ -98,6 +100,26 @@ class URLEditRequest(BaseModel):
     activation_time: Optional[str] = Field(None)
     custom_countdown_url: Optional[str] = Field(None, max_length=2048)
     exp_time: Optional[str] = Field(None)
+
+
+class Subscription(SQLModel, table=True):
+    """
+    Decoupled table tracking user subscription cycles, billing status,
+    and automatic dunning/email-state stages.
+    """
+    __tablename__ = "subscriptions"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True, unique=True)
+    tier: str = Field(default="free") # free, startup, business
+    status: str = Field(default="active") # active, relaxation, expired
+    current_period_start: datetime = Field(default_factory=datetime.utcnow)
+    current_period_end: datetime
+    relaxation_days_remaining: int = Field(default=7, nullable=False)
+    
+    dunning_warn_sent: bool = Field(default=False)
+    dunning_expired_sent: bool = Field(default=False)
+    dunning_ended_sent: bool = Field(default=False)
 
 
 class QuoteRequest(BaseModel):

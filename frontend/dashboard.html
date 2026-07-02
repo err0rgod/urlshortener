@@ -145,6 +145,30 @@
             </div>
         </div>
 
+        <!-- Premium Expiring Soon Welcome Banner -->
+        <div id="premium-expiring-banner" class="hidden bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+            <div class="relative z-10 space-y-2 text-left">
+                <span class="bg-white/20 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">Premium Expiring Soon</span>
+                <h2 class="text-xl font-extrabold">Your Premium plan is about to expire in <span id="premium-expiry-days">5</span> days</h2>
+                <p class="text-xs text-white/90 max-w-xl">Please renew your subscription to avoid losing access to custom domains and detailed analytics.</p>
+            </div>
+            <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none">
+                 <svg class="h-48 w-48 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2z"/></svg>
+            </div>
+        </div>
+
+        <!-- Relaxation Period Welcome Banner -->
+        <div id="premium-relaxation-banner" class="hidden bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+            <div class="relative z-10 space-y-2 text-left">
+                <span class="bg-white/20 text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">Plan Expired</span>
+                <h2 class="text-xl font-extrabold">Your plan has expired. In <span id="premium-relaxation-days">7</span> relaxation days you will lose access to all premium features</h2>
+                <p class="text-xs text-white/90 max-w-xl">Upgrade your tier now to restore access to custom domains and detailed link analytics.</p>
+            </div>
+            <div class="absolute right-0 bottom-0 opacity-10 pointer-events-none">
+                 <svg class="h-48 w-48 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2z"/></svg>
+            </div>
+        </div>
+
         <!-- Navigation Tabs -->
         <div class="border-b border-slate-200">
             <nav class="flex space-x-8" aria-label="Tabs">
@@ -329,6 +353,10 @@
                                 <span class="text-slate-400 font-medium">Subscription Tier</span>
                                 <span id="profile-tier-badge" class="bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Free</span>
                             </div>
+                            <div id="profile-expiration-container" class="flex justify-between items-center text-xs hidden">
+                                <span class="text-slate-400 font-medium">Days Remaining</span>
+                                <span id="profile-expiry-value" class="text-slate-700 font-semibold">-</span>
+                            </div>
                             <div id="upgrade-button-container" class="mt-4 pt-4 border-t border-slate-150 hidden space-y-2">
                                 <button onclick="startUpgrade('startup')" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
                                     Startup Choice ($19)
@@ -406,6 +434,17 @@
 
                 <!-- Premium Domains Section Container -->
                 <div id="domains-premium-container" class="space-y-6 hidden">
+                    <!-- Locked Domain warning banner -->
+                    <div id="domains-locked-banner" class="hidden p-4 border border-rose-100 bg-rose-50/50 rounded-xl space-y-2">
+                        <p class="text-xs text-rose-800 font-semibold">Your premium plan has expired</p>
+                        <p class="text-[11px] text-rose-700 leading-relaxed">
+                            Your custom domains are currently locked in read-only mode and new domains cannot be added. Your existing link redirections will continue to work. Please upgrade to restore edit capabilities.
+                        </p>
+                        <button onclick="startUpgrade('startup')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition-colors">
+                            Upgrade Plan
+                        </button>
+                    </div>
+
                     <!-- Add Domain Form -->
                     <form id="add-domain-form" class="flex gap-2 max-w-md">
                         <input type="text" id="domain_input" placeholder="e.g. links.mybrand.com" required
@@ -579,6 +618,17 @@
                         
                         const tierBadge = document.getElementById('profile-tier-badge');
                         const upgradeContainer = document.getElementById('upgrade-button-container');
+                        const premiumBanner = document.getElementById('premium-banner');
+                        const expiringBanner = document.getElementById('premium-expiring-banner');
+                        const relaxationBanner = document.getElementById('premium-relaxation-banner');
+                        const expirationContainer = document.getElementById('profile-expiration-container');
+                        const expiryValue = document.getElementById('profile-expiry-value');
+
+                        if (premiumBanner) premiumBanner.classList.add('hidden');
+                        if (expiringBanner) expiringBanner.classList.add('hidden');
+                        if (relaxationBanner) relaxationBanner.classList.add('hidden');
+                        if (expirationContainer) expirationContainer.classList.add('hidden');
+
                         const isPremium = ['premium', 'startup', 'business'].includes(data.user.tier);
                         tierBadge.textContent = data.user.tier || 'free';
                         if (isPremium) {
@@ -587,15 +637,38 @@
                                 upgradeContainer.classList.add('hidden');
                             }
                             
-                            // Show premium welcome banner
-                            const premiumBanner = document.getElementById('premium-banner');
-                            if (premiumBanner) {
-                                premiumBanner.classList.remove('hidden');
+                            if (data.user.subscription_status === 'expiring_soon') {
+                                if (expiringBanner) {
+                                    expiringBanner.classList.remove('hidden');
+                                    document.getElementById('premium-expiry-days').textContent = data.user.days_remaining;
+                                }
+                            } else {
+                                if (premiumBanner) {
+                                    premiumBanner.classList.remove('hidden');
+                                }
+                            }
+
+                            if (expirationContainer && expiryValue) {
+                                expirationContainer.classList.remove('hidden');
+                                expiryValue.textContent = `${data.user.days_remaining} days left`;
+                                expiryValue.className = "text-slate-700 font-semibold";
                             }
                         } else {
                             tierBadge.className = "bg-indigo-50 text-indigo-700 py-0.5 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-indigo-200";
                             if (upgradeContainer) {
                                 upgradeContainer.classList.remove('hidden');
+                            }
+
+                            if (data.user.subscription_status === 'relaxation') {
+                                if (relaxationBanner) {
+                                    relaxationBanner.classList.remove('hidden');
+                                    document.getElementById('premium-relaxation-days').textContent = data.user.relaxation_remaining;
+                                }
+                                if (expirationContainer && expiryValue) {
+                                    expirationContainer.classList.remove('hidden');
+                                    expiryValue.textContent = `Expired (${data.user.relaxation_remaining}d relaxation)`;
+                                    expiryValue.className = "text-rose-600 font-bold";
+                                }
                             }
                         }
                         
@@ -699,6 +772,16 @@
                     statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">Expired</span>`;
                 }
 
+                let expiryNotice = '';
+                if (link.exp_time) {
+                    const expDateStr = new Date(link.exp_time).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    });
+                    expiryNotice = `<div class="text-[10px] text-slate-400 font-medium mt-0.5">Expires: ${expDateStr}</div>`;
+                }
+
                 let analyticsOption = '';
                 const isPremium = userDetails && ['premium', 'startup', 'business'].includes(userDetails.tier);
                 if (isPremium) {
@@ -718,11 +801,14 @@
                 tr.className = 'hover:bg-slate-50/50 transition-colors';
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-900">
-                        <div class="flex items-center gap-1.5">
-                            <a href="${fullShortUrl}" target="_blank" class="hover:underline hover:text-indigo-600">${displayUrl}</a>
-                            <button onclick="copyToClipboard('${fullShortUrl}', this)" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                            </button>
+                        <div class="flex flex-col">
+                            <div class="flex items-center gap-1.5">
+                                <a href="${fullShortUrl}" target="_blank" class="hover:underline hover:text-indigo-600">${displayUrl}</a>
+                                <button onclick="copyToClipboard('${fullShortUrl}', this)" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                </button>
+                            </div>
+                            ${expiryNotice}
                         </div>
                     </td>
                     <td class="px-6 py-4 max-w-xs truncate text-xs text-slate-500 font-medium" title="${link.long_url}">
@@ -1246,25 +1332,46 @@
             const upgradeBanner = document.getElementById('domains-upgrade-banner');
             const premiumContainer = document.getElementById('domains-premium-container');
             const limitCounter = document.getElementById('domain-limit-counter');
+            const lockedBanner = document.getElementById('domains-locked-banner');
+            const addForm = document.getElementById('add-domain-form');
+            const domainInput = document.getElementById('domain_input');
+            const addBtn = addForm ? addForm.querySelector('button') : null;
 
-            if (!isPremium) {
-                upgradeBanner.classList.remove('hidden');
-                premiumContainer.classList.add('hidden');
-                limitCounter.textContent = 'Limit: 0 / 0';
-                return;
+            if (lockedBanner) lockedBanner.classList.add('hidden');
+            if (domainInput) domainInput.disabled = false;
+            if (addBtn) {
+                addBtn.disabled = false;
+                addBtn.className = "bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors";
             }
-
-            upgradeBanner.classList.add('hidden');
-            premiumContainer.classList.remove('hidden');
-
-            const limit = userDetails.tier === 'startup' ? 1 : 5;
 
             try {
                 const response = await fetch('/api/domains');
                 if (!response.ok) throw new Error("Failed to fetch domains");
                 userDomains = await response.json();
 
-                limitCounter.textContent = `Limit: ${userDomains.length} / ${limit}`;
+                const isLocked = userDomains.some(dom => dom.is_locked);
+
+                if (userDomains.length > 0 || isPremium) {
+                    upgradeBanner.classList.add('hidden');
+                    premiumContainer.classList.remove('hidden');
+                    
+                    const limit = userDetails.tier === 'startup' ? 1 : (userDetails.tier === 'business' ? 5 : 0);
+                    limitCounter.textContent = `Limit: ${userDomains.length} / ${limit || (isLocked ? 'Expired' : '0')}`;
+
+                    if (isLocked || (!isPremium && userDomains.length > 0)) {
+                        if (lockedBanner) lockedBanner.classList.remove('hidden');
+                        if (domainInput) domainInput.disabled = true;
+                        if (addBtn) {
+                            addBtn.disabled = true;
+                            addBtn.className = "bg-slate-300 text-slate-500 text-xs font-semibold px-4 py-2 rounded-lg cursor-not-allowed";
+                        }
+                    }
+                } else {
+                    upgradeBanner.classList.remove('hidden');
+                    premiumContainer.classList.add('hidden');
+                    limitCounter.textContent = 'Limit: 0 / 0';
+                    return;
+                }
 
                 const listEl = document.getElementById('domains-list');
                 const emptyEl = document.getElementById('domains-empty-state');
@@ -1279,6 +1386,10 @@
 
                     userDomains.forEach(dom => {
                         const row = document.createElement('div');
+                        const deleteBtnHtml = dom.is_locked 
+                            ? `<span class="text-xs text-slate-400 font-semibold cursor-not-allowed">Remove (Locked)</span>` 
+                            : `<button onclick="deleteDomain(${dom.id})" class="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer">Remove</button>`;
+
                         if (dom.is_verified) {
                             row.className = "flex items-center justify-between p-4 border border-slate-150 rounded-xl bg-slate-50/30 text-xs";
                             row.innerHTML = `
@@ -1288,9 +1399,7 @@
                                         Verified
                                     </span>
                                 </div>
-                                <button onclick="deleteDomain(${dom.id})" class="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer">
-                                    Remove
-                                </button>
+                                ${deleteBtnHtml}
                             `;
                         } else {
                             const parts = dom.domain_name.split('.');
@@ -1300,6 +1409,11 @@
                             const pointsTo = 'flexurl.app';
 
                             row.className = "flex flex-col gap-3 p-4 border border-slate-150 rounded-xl bg-slate-50/30 text-xs";
+                            
+                            const verifyBtnHtml = dom.is_locked
+                                ? `<span class="text-xs text-slate-400 font-semibold cursor-not-allowed">Verify DNS (Locked)</span>`
+                                : `<button onclick="verifyDomain(${dom.id})" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">Verify DNS</button>`;
+                                
                             row.innerHTML = `
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
@@ -1309,12 +1423,8 @@
                                         </span>
                                     </div>
                                     <div class="flex gap-3">
-                                        <button onclick="verifyDomain(${dom.id})" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">
-                                            Verify DNS
-                                        </button>
-                                        <button onclick="deleteDomain(${dom.id})" class="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer">
-                                            Remove
-                                        </button>
+                                        ${verifyBtnHtml}
+                                        ${deleteBtnHtml}
                                     </div>
                                 </div>
                                 <div class="p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-lg space-y-2 text-[11px] text-slate-500 leading-normal">
