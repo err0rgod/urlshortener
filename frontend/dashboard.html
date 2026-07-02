@@ -108,7 +108,7 @@
             </div>
             <div class="flex items-center space-x-4">
                 <!-- Theme Toggle Button -->
-                <button id="theme-toggle" type="button" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
+                <button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
                     <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
                     <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
                 </button>
@@ -277,8 +277,8 @@
                     </a>
                 </div>
 
-                <!-- Links list container -->
-                <div id="table-container" class="hidden overflow-x-auto">
+                <!-- Links list container (Desktop View) -->
+                <div id="table-container" class="hidden md:block overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-100">
                         <thead class="bg-slate-50/50">
                             <tr>
@@ -294,6 +294,13 @@
                             <!-- Populated dynamically -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Links cards container (Mobile View) -->
+                <div id="cards-container" class="block md:hidden space-y-4">
+                    <div id="links-cards-list" class="space-y-4">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
             </div>
 
@@ -419,7 +426,7 @@
 
                 <!-- Free Tier Banner -->
                 <div id="domains-upgrade-banner" class="hidden p-6 border border-indigo-100 bg-indigo-50/50 rounded-xl space-y-4 text-center">
-                    <p class="text-xs text-slate-655 max-w-lg mx-auto">
+                    <p class="text-xs text-slate-600 max-w-lg mx-auto">
                         Branded domains are only available on premium plans. Upgrade to Startup Choice or Business Pro to connect custom domains.
                     </p>
                     <div class="flex justify-center gap-3">
@@ -499,7 +506,7 @@
         <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-6 transform scale-95 transition-transform duration-300">
             <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white">Edit Shortened URL Settings</h3>
-                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 transition-colors">
+                <button onclick="closeEditModal()" aria-label="Close edit modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
@@ -804,7 +811,7 @@
                         <div class="flex flex-col">
                             <div class="flex items-center gap-1.5">
                                 <a href="${fullShortUrl}" target="_blank" class="hover:underline hover:text-indigo-600">${displayUrl}</a>
-                                <button onclick="copyToClipboard('${fullShortUrl}', this)" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
+                                <button onclick="copyToClipboard('${fullShortUrl}', this)" aria-label="Copy short URL" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                                 </button>
                             </div>
