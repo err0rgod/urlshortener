@@ -22,3 +22,6 @@ flexurlapp-firebase-adminsdk-*.json
 # Logs
 *.log
 backend/logs/
+
+# Dependencies
+node_modules/
