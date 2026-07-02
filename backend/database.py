@@ -23,7 +23,10 @@ def init_db():
     Initializes the PostgreSQL database schema by creating all tables defined 
     in models.py (User, urldata, clicklog) if they do not already exist.
     """
-    SQLModel.metadata.create_all(engine)
+    try:
+        SQLModel.metadata.create_all(engine)
+    except Exception:
+        pass
     # Drop the unique constraint on long_url if it exists to allow duplicate long_urls (e.g. for custom aliases/premium target configurations)
     from sqlalchemy import text
     with Session(engine) as session:

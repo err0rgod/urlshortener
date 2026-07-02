@@ -734,24 +734,28 @@
             }
         }
 
-        // Render Links list in the table
         function renderLinks(links) {
             const tbody = document.getElementById('links-tbody');
             const loader = document.getElementById('table-loader');
             const empty = document.getElementById('table-empty');
             const table = document.getElementById('table-container');
+            const cardsContainer = document.getElementById('cards-container');
+            const cardsList = document.getElementById('links-cards-list');
 
             tbody.innerHTML = '';
+            if (cardsList) cardsList.innerHTML = '';
             loader.classList.add('hidden');
 
             if (links.length === 0) {
                 empty.classList.remove('hidden');
                 table.classList.add('hidden');
+                if (cardsContainer) cardsContainer.classList.add('hidden');
                 return;
             }
 
             empty.classList.add('hidden');
             table.classList.remove('hidden');
+            if (cardsContainer) cardsContainer.classList.remove('hidden');
 
             links.forEach(link => {
                 let domainHost = window.location.host;
@@ -804,6 +808,7 @@
                     `;
                 }
 
+                // Desktop Table Row
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50/50 transition-colors';
                 tr.innerHTML = `
@@ -837,6 +842,60 @@
                     </td>
                 `;
                 tbody.appendChild(tr);
+
+                // Mobile Card View
+                if (cardsList) {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-3.5 shadow-sm';
+                    
+                    let mobileAnalytics = '';
+                    if (isPremium) {
+                        mobileAnalytics = `<a href="/analytics/${link.short_url}" class="text-xs text-indigo-600 hover:text-indigo-850 font-bold transition-colors">Analytics</a>`;
+                    } else {
+                        mobileAnalytics = `
+                            <button onclick="showPremiumAnalyticsNotice()" class="inline-flex items-center gap-1 text-slate-400 hover:text-slate-500 transition-colors text-xs font-semibold cursor-not-allowed">
+                                <span>Analytics</span>
+                            </button>
+                        `;
+                    }
+
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            ${statusBadge}
+                            <div class="flex items-center gap-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Clicks:</span>
+                                <span class="text-xs font-bold text-slate-800 dark:text-white">${link.click_count || 0}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between gap-2">
+                                <a href="${fullShortUrl}" target="_blank" class="text-sm font-extrabold text-slate-900 dark:text-white hover:underline hover:text-indigo-600 truncate">
+                                    ${displayUrl}
+                                </a>
+                                <button onclick="copyToClipboard('${fullShortUrl}', this)" aria-label="Copy short URL" class="text-slate-400 hover:text-indigo-600 transition-colors p-1" title="Copy">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                                </button>
+                            </div>
+                            <div class="text-xs text-slate-500 truncate dark:text-slate-450">
+                                <span class="font-bold text-slate-400">Target:</span>
+                                <a href="${link.long_url}" target="_blank" class="hover:underline">${link.long_url}</a>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-3">
+                            <div>Created: ${createdDate}</div>
+                            ${expiryNotice ? expiryNotice : ''}
+                        </div>
+
+                        <div class="flex items-center justify-end gap-3 pt-2">
+                            ${mobileAnalytics}
+                            ${isPremium ? `<button onclick="openEditModal('${link.short_url}')" class="text-xs text-indigo-600 hover:text-indigo-850 font-bold transition-colors">Edit</button>` : ''}
+                            <button onclick="confirmDeleteLink('${link.short_url}')" class="text-xs text-rose-600 hover:text-rose-850 font-bold transition-colors">Delete</button>
+                        </div>
+                    `;
+                    cardsList.appendChild(card);
+                }
             });
         }
 
