@@ -1,6 +1,7 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, Field as SQLField
 from typing import Optional
 from datetime import datetime, UTC
+
 
 
 class User(SQLModel, table=True):
@@ -109,17 +110,17 @@ class Subscription(SQLModel, table=True):
     """
     __tablename__ = "subscriptions"
     
-    id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True, unique=True)
-    tier: str = Field(default="free") # free, startup, business
-    status: str = Field(default="active") # active, relaxation, expired
-    current_period_start: datetime = Field(default_factory=datetime.utcnow)
+    id: Optional[int] = SQLField(default=None, primary_key=True)
+    user_id: int = SQLField(foreign_key="users.id", index=True, unique=True, ondelete="CASCADE")
+    tier: str = SQLField(default="free") # free, startup, business
+    status: str = SQLField(default="active") # active, relaxation, expired
+    current_period_start: datetime = SQLField(default_factory=datetime.utcnow)
     current_period_end: datetime
-    relaxation_days_remaining: int = Field(default=7, nullable=False)
+    relaxation_days_remaining: int = SQLField(default=7, nullable=False)
     
-    dunning_warn_sent: bool = Field(default=False)
-    dunning_expired_sent: bool = Field(default=False)
-    dunning_ended_sent: bool = Field(default=False)
+    dunning_warn_sent: bool = SQLField(default=False)
+    dunning_expired_sent: bool = SQLField(default=False)
+    dunning_ended_sent: bool = SQLField(default=False)
 
 
 class QuoteRequest(BaseModel):

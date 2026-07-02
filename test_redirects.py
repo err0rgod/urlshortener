@@ -55,6 +55,19 @@ class TestRedirects(unittest.TestCase):
                     session.delete(url)
                 session.commit()
             
+            from models import Subscription
+            if existing_p:
+                sub_p_stmt = select(Subscription).where(Subscription.user_id == existing_p.id)
+                sub_p = session.exec(sub_p_stmt).first()
+                if sub_p:
+                    session.delete(sub_p)
+            if existing_f:
+                sub_f_stmt = select(Subscription).where(Subscription.user_id == existing_f.id)
+                sub_f = session.exec(sub_f_stmt).first()
+                if sub_f:
+                    session.delete(sub_f)
+            session.commit()
+            
             if existing_p:
                 session.delete(existing_p)
             if existing_f:
@@ -111,6 +124,19 @@ class TestRedirects(unittest.TestCase):
                     session.delete(url)
                 session.commit()
                     
+            from models import Subscription
+            if existing_p:
+                sub_p_stmt = select(Subscription).where(Subscription.user_id == existing_p.id)
+                sub_p = session.exec(sub_p_stmt).first()
+                if sub_p:
+                    session.delete(sub_p)
+            if existing_f:
+                sub_f_stmt = select(Subscription).where(Subscription.user_id == existing_f.id)
+                sub_f = session.exec(sub_f_stmt).first()
+                if sub_f:
+                    session.delete(sub_f)
+            session.commit()
+            
             if existing_p:
                 session.delete(existing_p)
             if existing_f:

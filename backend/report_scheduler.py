@@ -43,7 +43,7 @@ def get_log_counts_24h() -> dict:
         logger.error(f"Failed to parse daily logs: {e}")
     return counts
 
-async def generate_and_send_report():
+def generate_and_send_report():
     """
     Queries database metrics for unique visitors, link redirects, and link creations 
     along with log occurrences in the last 24 hours, dispatches an HTML report to the admin.
@@ -157,15 +157,14 @@ async def generate_and_send_report():
     }
     
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(url, headers=headers, json=payload, timeout=10)
-            resp.raise_for_status()
+        resp = httpx.post(url, headers=headers, json=payload, timeout=10)
+        resp.raise_for_status()
         logger.info("Daily executive summary report email dispatched successfully via Resend API.")
     except Exception as e:
         logger.error(f"Failed to dispatch daily executive report email via Resend API: {e}")
 
 
-async def send_dunning_email(email: str, subject: str, html_body: str):
+def send_dunning_email(email: str, subject: str, html_body: str):
     if not RESEND_API_KEY:
         logger.warning(f"RESEND_API_KEY is not defined in the environment. Skipping email dispatch to {email}.")
         return
@@ -182,15 +181,14 @@ async def send_dunning_email(email: str, subject: str, html_body: str):
         "html": html_body
     }
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(url, headers=headers, json=payload, timeout=10)
-            resp.raise_for_status()
+        resp = httpx.post(url, headers=headers, json=payload, timeout=10)
+        resp.raise_for_status()
         logger.info(f"Dunning email '{subject}' dispatched to {email} successfully.")
     except Exception as e:
         logger.error(f"Failed to dispatch dunning email to {email}: {e}")
 
 
-async def process_subscription_dunning_checks(now_utc: datetime.datetime):
+def process_subscription_dunning_checks(now_utc: datetime.datetime):
     logger.info("Executing daily subscription dunning and expiration checks...")
     now_naive = now_utc.replace(tzinfo=None)
     

@@ -38,7 +38,7 @@ def init_db():
             session.exec(text("""
                 CREATE TABLE IF NOT EXISTS subscriptions (
                     id SERIAL PRIMARY KEY,
-                    user_id INTEGER UNIQUE REFERENCES users(id),
+                    user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
                     tier VARCHAR DEFAULT 'free',
                     status VARCHAR DEFAULT 'active',
                     current_period_start TIMESTAMP WITHOUT TIME ZONE,

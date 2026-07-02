@@ -80,17 +80,30 @@ def get_user_tier(user_id: int, db_session: Session) -> str:
         if not user:
             return "free"
         
+        from datetime import timedelta
+        expires_at = user.plan_expires_at
+        status = "expired"
+        tier = user.tier
+        
+        if not expires_at:
+            if user.tier in ("premium", "startup", "business"):
+                expires_at = now + timedelta(days=30)
+                status = "active"
+            else:
+                expires_at = now
+                status = "expired"
+                tier = "free"
+        else:
+            status = "active" if expires_at > now else "expired"
+            
         sub = Subscription(
             user_id=user.id,
-            tier=user.tier,
+            tier=tier,
             current_period_start=user.created_at or now,
-            current_period_end=user.plan_expires_at if user.plan_expires_at else now,
+            current_period_end=expires_at,
             relaxation_days_remaining=user.relaxation_days_remaining or 7,
-            status="active" if (user.plan_expires_at and user.plan_expires_at > now) else "expired"
+            status=status
         )
-        if not user.plan_expires_at:
-            sub.tier = "free"
-            sub.status = "expired"
         try:
             db_session.add(sub)
             db_session.commit()
