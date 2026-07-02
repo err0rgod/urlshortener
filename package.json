@@ -1,0 +1,12 @@
+{
+  "name": "urlshortener",
+  "version": "1.0.0",
+  "description": "Secure URL Shortener Infrastructure",
+  "main": "backend/app.py",
+  "scripts": {
+    "build:css": "tailwindcss -i ./frontend/static/input.css -o ./frontend/static/output.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}
