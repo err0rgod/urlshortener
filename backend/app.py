@@ -153,9 +153,56 @@ FRONTEND_DIR = os.path.join(os.path.dirname(BASE_DIR), "frontend")
 
 init_db() #for initialising table structure
 
+def compile_tailwind():
+    """
+    Checks if tailwind config and input CSS exist, and runs npx @tailwindcss/cli
+    to compile static/output.css in the background. Fails silently if Node/npx is not installed.
+    """
+    try:
+        import subprocess
+        # Paths
+        input_css_dir = os.path.join(FRONTEND_DIR, "static")
+        input_css = os.path.join(input_css_dir, "input.css")
+        output_css = os.path.join(input_css_dir, "output.css")
+        config_path = os.path.join(os.path.dirname(BASE_DIR), "tailwind.config.js")
+
+        # 1. Create input.css if it doesn't exist
+        if not os.path.exists(input_css):
+            with open(input_css, "w", encoding="utf-8") as f:
+                f.write("@tailwind base;\n@tailwind components;\n@tailwind utilities;\n")
+
+        # 2. Create tailwind.config.js if it doesn't exist
+        if not os.path.exists(config_path):
+            with open(config_path, "w", encoding="utf-8") as f:
+                f.write("""module.exports = {
+  content: ["./frontend/**/*.html"],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        mono: ['Fira Code', 'monospace'],
+      }
+    }
+  },
+  plugins: [],
+}""")
+
+        # 3. Compile using @tailwindcss/cli
+        logger.info("Auto-compiling Tailwind CSS...")
+        cmd = ["npx", "@tailwindcss/cli", "-i", input_css, "-o", output_css, "--minify"]
+        subprocess.run(cmd, shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logger.info("Tailwind CSS compilation complete.")
+    except Exception as e:
+        logger.warning(f"Tailwind CSS automatic compilation skipped (Node/npx not available or failed): {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Application starting up...")
+    
+    # Auto-compile Tailwind CSS in the background on startup
+    await asyncio.to_thread(compile_tailwind)
+    
     logger.info("Launching background daily report scheduler...")
     scheduler_task = asyncio.create_task(daily_report_scheduler_loop())
     yield

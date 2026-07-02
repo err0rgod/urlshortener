@@ -50,19 +50,19 @@
 
     <!-- Top Navigation Header -->
     <header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
-        <div class="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-            <div class="flex-shrink-0 w-48 flex items-center">
+        <div class="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
+            <div class="flex-shrink-0 w-32 sm:w-48 flex items-center">
                 <a href="/" class="flex items-center">
-                    <img src="/static/logo.svg" alt="FlexURL Logo" class="h-12 w-auto py-1.5 px-2 dark:brightness-0 dark:invert">
+                    <img src="/static/logo.svg" alt="FlexURL Logo" width="192" height="48" class="h-9 sm:h-12 w-auto py-1.5 px-1 sm:px-2 dark:brightness-0 dark:invert">
                 </a>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 sm:space-x-4">
                 <!-- Theme Toggle Button -->
-                <button id="theme-toggle" type="button" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2.5 transition-colors">
+                <button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 dark:focus:ring-slate-700 rounded-lg text-sm p-2 transition-colors">
                     <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                    <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95a1 1 0 11-1.414-1.414 1.05 1.05 0 000-1.414 1 1 0 111.414 1.414 1.05 0 000 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.46 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
                 </button>
-                <a href="/dashboard" class="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Go to Dashboard</a>
+                <a href="/dashboard" class="text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Go to Dashboard</a>
             </div>
         </div>
     </header>
@@ -97,7 +97,7 @@
             
             <!-- Section: Intro -->
             <section id="sec-intro" class="scroll-mt-24 space-y-4">
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">FlexURL Documentation</h1>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">FlexURL Documentation Hub</h1>
                 <p class="text-sm text-slate-500 leading-relaxed">
                     Welcome to the FlexURL documentation hub. FlexURL is a secure, privacy-first, enterprise-grade redirection platform designed to help teams and developers create clean, branded short links with native analytics, bypassing bloated URL tracking parameters.
                 </p>
@@ -201,7 +201,7 @@
                             Log in to your DNS provider (e.g. Cloudflare, GoDaddy, Namecheap, Route 53) and add a CNAME record pointing your custom domain prefix (host) to FlexURL:
                         </p>
                         <code class="block font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">Record Type: CNAME | Host: links | Target/Value: flexurl.app</code>
-                        <p class="text-slate-400 text-[10px]">
+                        <p class="text-slate-405 text-[10px]">
                             *Note for Cloudflare users: If proxying your domain (orange cloud), ensure your SSL/TLS encryption mode is set to **Flexible** or **Full (non-strict)** to authorize handshakes.*
                         </p>
                     </div>
@@ -218,7 +218,7 @@
                         <p class="text-slate-500 leading-relaxed">
                             To protect and isolate your marketing campaigns, FlexURL enforces strict routing constraints on all custom domain links:
                         </p>
-                        <ul class="list-disc pl-5 text-slate-450 space-y-1">
+                        <ul class="list-disc pl-5 text-slate-500 space-y-1">
                             <li>A short link created under a specific custom domain (e.g., `links.mybrand.com/xyz`) is only accessible via that selected domain or the default fallback `flexurl.app/xyz`.</li>
                             <li>Accessing the short code through other custom domains you own (e.g., `go.brand.io/xyz`) will return a 404 error.</li>
                             <li>Standard links shortened under the default domain `flexurl.app` cannot be accessed using your custom domains.</li>
@@ -261,11 +261,49 @@
             </section>
 
             <!-- Section: Pricing & Payments -->
-            <section id="sec-payments" class="scroll-mt-24 space-y-4">
-                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Pricing & Razorpay Payments</h2>
-                <p class="text-sm text-slate-500 leading-relaxed">
-                    Premium subscription upgrades are priced in USD for global customers ($19 for Startup Choice, $39 for Business Pro) but are securely processed in INR internally (₹1599 and ₹3499). This allows seamless support for UPI, Google Pay, PhonePe, Paytm, domestic Netbanking, and international credit cards.
-                </p>
+            <section id="sec-payments" class="scroll-mt-24 space-y-6">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white">Pricing & Subscription Lifecycle</h2>
+                    <p class="text-sm text-slate-500 leading-relaxed mt-2">
+                        Premium subscription upgrades are priced in USD for global customers ($19 for Startup Choice, $39 for Business Pro) but are securely processed in INR internally (₹1599 and ₹3499). This allows seamless support for UPI, Google Pay, PhonePe, Paytm, domestic Netbanking, and international credit cards.
+                    </p>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                    <!-- Stacking Policies -->
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-white dark:bg-slate-900 space-y-3">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">Subscription Upgrades & Date Stacking</p>
+                        <p class="text-slate-500 leading-relaxed">
+                            When upgrading or renewing your tier multiple times, remaining active subscription days stack up. For example, buying two 30-day Startup Choice periods back-to-back will extend your plan's expiration date by exactly 60 days from today. Every upgrade resets your grace relaxation days to the default 7 days.
+                        </p>
+                    </div>
+
+                    <!-- Expiration & Grace Period -->
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-white dark:bg-slate-900 space-y-3">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">Expiration Warnings & Grace Period</p>
+                        <p class="text-slate-500 leading-relaxed">
+                            If your subscription plan expires, you do not lose access immediately:
+                        </p>
+                        <ul class="list-disc pl-5 text-slate-500 space-y-1">
+                            <li><strong>Warning Phase (5 Days Left)</strong>: A warning banner appears on your dashboard, and you will receive a dunning warning email to renew.</li>
+                            <li><strong>Grace Phase (0 to -7 Days)</strong>: Your active subscription days end and a 7-day relaxation grace period starts counting down. Your dashboard banner will alert you of the remaining grace days. Redirection paths continue to function normally.</li>
+                            <li><strong>Downgraded Phase (-7+ Days)</strong>: After the 7 grace days are exhausted, your account is downgraded to the Free Tier.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Soft Downgrade Policy -->
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 bg-white dark:bg-slate-900 space-y-3">
+                        <p class="font-bold text-slate-800 dark:text-slate-200">Soft Downgrade & Data Retention Policy</p>
+                        <p class="text-slate-500 leading-relaxed">
+                            To ensure your business campaigns are never interrupted, **we do not delete your links, statistics, or custom domains upon downgrade**. Instead:
+                        </p>
+                        <ul class="list-disc pl-5 text-slate-500 space-y-1">
+                            <li>All existing links continue to redirect normally.</li>
+                            <li>Your custom domains are placed in **Locked (Read-Only)** mode. You can view them in the dashboard, but you cannot edit settings, verify DNS records, or add new domains.</li>
+                            <li>Re-upgrading to any premium plan instantly restores full edit and analytics access to all your domains and links.</li>
+                        </ul>
+                    </div>
+                </div>
             </section>
 
             <!-- Section: Support Tickets Form -->
