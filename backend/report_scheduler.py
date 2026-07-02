@@ -225,7 +225,7 @@ def process_subscription_dunning_checks(now_utc: datetime.datetime):
                         </p>
                     </div>
                     """
-                    await send_dunning_email(user.email, subject, html_content)
+                    send_dunning_email(user.email, subject, html_content)
                     sub.dunning_warn_sent = True
                     session.add(sub)
                     
@@ -250,7 +250,7 @@ def process_subscription_dunning_checks(now_utc: datetime.datetime):
                     </div>
                 </div>
                 """
-                await send_dunning_email(user.email, subject, html_content)
+                send_dunning_email(user.email, subject, html_content)
                 sub.dunning_expired_sent = True
                 
                 try:
@@ -283,7 +283,7 @@ def process_subscription_dunning_checks(now_utc: datetime.datetime):
                     </div>
                 </div>
                 """
-                await send_dunning_email(user.email, subject, html_content)
+                send_dunning_email(user.email, subject, html_content)
                 sub.dunning_ended_sent = True
                 
                 try:
@@ -326,8 +326,8 @@ async def daily_report_scheduler_loop():
                             pass
                                 
                 if not sent_today:
-                    await generate_and_send_report()
-                    await process_subscription_dunning_checks(now)
+                    await asyncio.to_thread(generate_and_send_report)
+                    await asyncio.to_thread(process_subscription_dunning_checks, now)
                     
                     try:
                         redis_client.set("daily_report_last_sent", current_date)
