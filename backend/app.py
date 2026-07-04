@@ -10,7 +10,7 @@ if BASE_DIR not in sys.path:
 
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Response, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
-from short_url_gen import add_url, serve_url, ban_in_cache,add_custom_url
+from short_url_gen import add_url, serve_url, ban_in_cache, add_custom_url, get_user_tier, redis_client
 from database import mark_url_banned, init_db, add_clicklog, engine
 from validations import is_valid_url, check_safe_browsing, is_valid_custom_alias
 from ratelimit import RateLimiterStore
@@ -58,88 +58,7 @@ def get_required_user_id(request: Request) -> int:
     return user_id
 
 
-def get_user_tier(user_id: int, db_session: Session) -> str:
-    redis_key = f"user_tier:{user_id}"
-    try:
-        from short_url_gen import redis_client
-        cached_tier = redis_client.get(redis_key)
-        if cached_tier:
-            return cached_tier
-    except Exception:
-        pass
-
-    from models import Subscription
-    from datetime import datetime, UTC
-    now = datetime.now(UTC).replace(tzinfo=None)
-
-    statement = select(Subscription).where(Subscription.user_id == user_id)
-    sub = db_session.exec(statement).first()
-
-    if not sub:
-        user = db_session.get(User, user_id)
-        if not user:
-            return "free"
-        
-        from datetime import timedelta
-        expires_at = user.plan_expires_at
-        status = "expired"
-        tier = user.tier
-        
-        if not expires_at:
-            if user.tier in ("premium", "startup", "business"):
-                expires_at = now + timedelta(days=30)
-                status = "active"
-            else:
-                expires_at = now
-                status = "expired"
-                tier = "free"
-        else:
-            status = "active" if expires_at > now else "expired"
-            
-        sub = Subscription(
-            user_id=user.id,
-            tier=tier,
-            current_period_start=user.created_at or now,
-            current_period_end=expires_at,
-            relaxation_days_remaining=user.relaxation_days_remaining or 7,
-            status=status
-        )
-        try:
-            db_session.add(sub)
-            db_session.commit()
-            db_session.refresh(sub)
-        except Exception:
-            pass
-
-    if sub.tier == "free":
-        return "free"
-
-    plan_expires = sub.current_period_end.replace(tzinfo=None) if sub.current_period_end.tzinfo else sub.current_period_end
-    
-    tier = sub.tier
-    if now >= plan_expires:
-        days_since_expiry = (now - plan_expires).days
-        relaxation_remaining = sub.relaxation_days_remaining - days_since_expiry
-        if relaxation_remaining <= 0 and sub.status != "expired":
-            try:
-                sub.status = "expired"
-                user = db_session.get(User, user_id)
-                if user:
-                    user.tier = "free"
-                    db_session.add(user)
-                db_session.add(sub)
-                db_session.commit()
-            except Exception:
-                pass
-        tier = "free"
-
-    try:
-        from short_url_gen import redis_client
-        redis_client.set(redis_key, tier, ex=3600)  # cache for 1 hour
-    except Exception:
-        pass
-
-    return tier
+# get_user_tier is imported from short_url_gen
 
 import razorpay
 RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
@@ -196,17 +115,50 @@ def compile_tailwind():
     except Exception as e:
         logger.warning(f"Tailwind CSS automatic compilation skipped (Node/npx not available or failed): {e}")
 
+# Cached in-memory HTML templates
+HTML_TEMPLATES = {}
+
+def load_html_templates():
+    global HTML_TEMPLATES
+    for name in ["banned.html", "expired.html", "countdown.html", "password_gate.html"]:
+        path = os.path.join(FRONTEND_DIR, name)
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    HTML_TEMPLATES[name] = f.read()
+                logger.info(f"Loaded HTML template: {name}")
+            except Exception as e:
+                logger.error(f"Failed to load template {name}: {e}")
+        else:
+            logger.warning(f"HTML template not found: {path}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Application starting up...")
     
-    # Auto-compile Tailwind CSS in the background on startup
+    # 1. Initialize ARQ redis connection pool
+    try:
+        from arq import create_pool
+        from arq_settings import redis_settings
+        app.state.arq_pool = await create_pool(redis_settings)
+        logger.info("ARQ Redis pool connection initialized.")
+    except Exception as e:
+        logger.critical(f"ARQ Redis unavailable at startup: {e}")
+        
+    # 2. Cache HTML templates
+    load_html_templates()
+    
+    # 3. Auto-compile Tailwind CSS in the background on startup
     await asyncio.to_thread(compile_tailwind)
     
     logger.info("Launching background daily report scheduler...")
     scheduler_task = asyncio.create_task(daily_report_scheduler_loop())
     yield
     logger.info("Application shutting down...")
+    if hasattr(app.state, "arq_pool") and app.state.arq_pool:
+        await app.state.arq_pool.close()
+        logger.info("ARQ Redis pool closed.")
+        
     logger.info("Canceling background report scheduler task...")
     scheduler_task.cancel()
     try:
@@ -214,6 +166,7 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     logger.info("Application shutdown completed.")
+
 
 
 app = FastAPI(lifespan=lifespan)
@@ -367,64 +320,7 @@ async def create_support_ticket(ticket: SupportTicketRequest, background_tasks: 
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to process support ticket")
 
-# for gathering analytics 
-async def record_analytics(short_url : str, ip_address : str, user_agent : str, referer : str):
-    """
-    process http metadata and push in DB"""
-    from datetime import datetime, UTC
-    import httpx
-
-    browser,device = parse_user_agent(user_agent)
-    country, city = await get_ip_location(ip_address)
-    clean_referer = parse_referer(referer)
-    is_bot = check_is_bot(user_agent)
-    
-    log = clicklog(
-        short_url=short_url,
-        ip_address=ip_address,
-        country=country,
-        city=city,
-        browser=browser,
-        device=device,
-        referer=clean_referer,
-        is_bot=is_bot
-    )
-    add_clicklog(log)
-    
-    # Increment redirection count on the urldata record
-    with Session(engine) as db_session:
-        statement = select(urldata).where(urldata.short_url == short_url)
-        url_entry = db_session.exec(statement).first()
-        if url_entry:
-            url_entry.click_count += 1
-            db_session.add(url_entry)
-            db_session.commit()
-            db_session.refresh(url_entry)
-            
-            # Premium Webhook alert delivery
-            if url_entry.webhook_url and url_entry.user_id:
-                user = db_session.get(User, url_entry.user_id)
-                if user and user.tier in ("premium", "startup", "business"):
-                    webhook_payload = {
-                        "short_url": url_entry.short_url,
-                        "long_url": url_entry.long_url,
-                        "clicked_at": log.clicked_at.isoformat() if log.clicked_at else datetime.now(UTC).isoformat(),
-                        "ip_address": ip_address,
-                        "country": country,
-                        "city": city,
-                        "browser": browser,
-                        "device": device,
-                        "referer": clean_referer,
-                        "is_bot": is_bot
-                    }
-                    async def send_webhook(url: str, data: dict):
-                        async with httpx.AsyncClient() as client:
-                            try:
-                                await client.post(url, json=data, timeout=5.0)
-                            except Exception as e:
-                                logger.warning(f"Failed to deliver webhook to {url}: {e}")
-                    
-                    asyncio.create_task(send_webhook(url_entry.webhook_url, webhook_payload))
+# record_analytics is processed by the background arq worker in workers.py
 
 
 @app.post("/api/payments/create-order")
@@ -1196,21 +1092,10 @@ async def edit_link(short_url: str, edit_data: URLEditRequest, user_id: int = De
                 if exp_utc < now_utc:
                     is_expired = True
 
-            if is_expired:
-                redis_client.set(short_url, "Expired", ex=3600)
-            elif is_dynamic:
-                redis_client.set(short_url, "DYNAMIC", ex=3600)
-            else:
-                redis_ttl = 3600
-                if url_entry.exp_time:
-                    exp_utc = url_entry.exp_time.astimezone(UTC).replace(tzinfo=None) if url_entry.exp_time.tzinfo else url_entry.exp_time
-                    now_utc = datetime.now(UTC).replace(tzinfo=None)
-                    seconds_left = int((exp_utc - now_utc).total_seconds())
-                    if seconds_left > 0:
-                        redis_ttl = min(3600, seconds_left)
-                redis_client.set(short_url, url_entry.long_url, ex=redis_ttl)
+            redis_client.delete(short_url)
+            logger.debug(f"Redis cache invalidated on edit for short_url: {short_url}")
         except Exception as e:
-            logger.warning(f"Failed to update Redis cache on edit: {e}")
+            logger.warning(f"Failed to invalidate Redis cache on edit: {e}")
 
     return {"status": "success", "message": "Short URL updated successfully"}
 
@@ -1435,8 +1320,7 @@ async def analytics(short_url: str, user_id: Optional[int] = Depends(get_optiona
 
 # main redirection endpoint accepts short urls and cheks if they exists or not and redirects them 
 @app.get("/{short_url}")
-async def get_short_give_long(short_url: str, request : Request, backgroud_tasks : BackgroundTasks):
-    # Host header custom domain mapping check
+async def get_short_give_long(short_url: str, request : Request):
     host = request.headers.get("host", "").lower().split(":")[0]
     is_custom_domain = not (host == "flexurl.app" or host.endswith(".flexurl.app") or host in ("localhost", "127.0.0.1", "testserver"))
 
@@ -1444,7 +1328,6 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
     if is_custom_domain:
         redis_key = f"dom_owner:{host}"
         try:
-            from short_url_gen import redis_client
             cached_val = redis_client.get(redis_key)
         except Exception:
             cached_val = None
@@ -1470,122 +1353,165 @@ async def get_short_give_long(short_url: str, request : Request, backgroud_tasks
                     pass
 
     try:
-        long_url = serve_url(short_url)
+        long_url, cached_data = serve_url(short_url)
     except Exception:
         raise HTTPException(status_code=503, detail="Service temporary unavailable")
 
     if long_url == "BANNED":
-        with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=403)
-            
+        logger.debug(f"Accessing banned link: {short_url}")
+        content = HTML_TEMPLATES.get("banned.html", "This URL is banned.")
+        return HTMLResponse(content=content, status_code=403)
+        
     if long_url == "Expired":
-        with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=410)
-            
+        logger.debug(f"Accessing expired link: {short_url}")
+        content = HTML_TEMPLATES.get("expired.html", "This URL has expired.")
+        return HTMLResponse(content=content, status_code=410)
+        
     # Premium dynamic routing fallback check
     if long_url == "DYNAMIC" or long_url is None or is_custom_domain:
-        from datetime import datetime, UTC
-        with Session(engine) as db_session:
-            statement = select(urldata).where(urldata.short_url == short_url)
-            url_entry = db_session.exec(statement).first()
-            if not url_entry:
-                if long_url == "DYNAMIC":
-                    raise HTTPException(status_code=503, detail="Service temporary unavailable")
-                raise HTTPException(status_code=404, detail="Short URL not found")
+        if cached_data:
+            url_entry = cached_data
+        else:
+            with Session(engine) as db_session:
+                statement = select(urldata).where(urldata.short_url == short_url)
+                url_db = db_session.exec(statement).first()
+                if not url_db:
+                    raise HTTPException(status_code=404, detail="Short URL not found")
                 
-            # Enforce that short code accessed via custom domain belongs to domain owner
-            if domain_user_id is not None and url_entry.user_id != domain_user_id:
+                user_tier = get_user_tier(url_db.user_id, db_session) if url_db.user_id else "free"
+                url_entry = {
+                    "long_url": url_db.long_url,
+                    "ios_url": url_db.ios_url,
+                    "android_url": url_db.android_url,
+                    "fallback_url": url_db.fallback_url,
+                    "activation_time": url_db.activation_time.isoformat() if url_db.activation_time else None,
+                    "exp_time": url_db.exp_time.isoformat() if url_db.exp_time else None,
+                    "password_hash": url_db.password_hash,
+                    "domain": url_db.domain,
+                    "user_id": url_db.user_id,
+                    "tier": user_tier
+                }
+
+        if domain_user_id is not None and url_entry.get("user_id") != domain_user_id:
+            raise HTTPException(status_code=404, detail="Short URL not found on this domain")
+
+        if url_entry.get("domain") and url_entry.get("domain") != "flexurl.app":
+            if is_custom_domain and host != url_entry.get("domain"):
                 raise HTTPException(status_code=404, detail="Short URL not found on this domain")
+        else:
+            if is_custom_domain:
+                raise HTTPException(status_code=404, detail="Short URL not found on this domain")
+            
+        user_tier = url_entry.get("tier", "free")
+        is_premium_owned = user_tier in ("premium", "startup", "business")
 
-            # Enforce that short code accessed via custom domain matches the selected domain
-            if url_entry.domain and url_entry.domain != "flexurl.app":
-                if is_custom_domain and host != url_entry.domain:
-                    raise HTTPException(status_code=404, detail="Short URL not found on this domain")
+        # 0. Premium Scheduled Activation check
+        if is_premium_owned and url_entry.get("activation_time"):
+            activation_utc = datetime.fromisoformat(url_entry.get("activation_time")).replace(tzinfo=None)
+            now_utc = datetime.now(UTC).replace(tzinfo=None)
+            if now_utc < activation_utc:
+                if url_entry.get("custom_countdown_url"):
+                    return RedirectResponse(url_entry.get("custom_countdown_url"), status_code=302)
+                else:
+                    html_content = HTML_TEMPLATES.get("countdown.html", "")
+                    activation_iso = activation_utc.isoformat() + "Z"
+                    html_content = html_content.replace("window.__ACTIVATION_TIME__ = null;", f"window.__ACTIVATION_TIME__ = '{activation_iso}';")
+                    return HTMLResponse(content=html_content)
+
+        # 1. Expiration check with premium fallback
+        is_expired = False
+        if url_entry.get("exp_time"):
+            exp_utc = datetime.fromisoformat(url_entry.get("exp_time")).replace(tzinfo=None)
+            now_utc = datetime.now(UTC).replace(tzinfo=None)
+            if exp_utc < now_utc:
+                is_expired = True
+                
+        if is_expired:
+            if url_entry.get("fallback_url") and url_entry.get("user_id"):
+                if is_premium_owned:
+                    logger.debug(f"Applying fallback redirect for short_url: {short_url} -> {url_entry.get('fallback_url')}")
+                    return RedirectResponse(url_entry.get("fallback_url"), status_code=302)
+            
+            content = HTML_TEMPLATES.get("expired.html", "This URL has expired.")
+            return HTMLResponse(content=content, status_code=410)
+                
+        # 3. Password check
+        if url_entry.get("password_hash") and url_entry.get("user_id"):
+            if is_premium_owned:
+                cookie_name = f"auth_link_{short_url}"
+                auth_cookie = request.cookies.get(cookie_name)
+                if auth_cookie != url_entry.get("password_hash"):
+                    logger.debug(f"Accessing password protected link: {short_url}")
+                    content = HTML_TEMPLATES.get("password_gate.html", "")
+                    return HTMLResponse(content=content)
+                        
+        # 4. OS targeting
+        target_url = url_entry.get("long_url")
+        if url_entry.get("user_id"):
+            if is_premium_owned:
+                user_agent = request.headers.get("user-agent", "").lower()
+                if "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent:
+                    if url_entry.get("ios_url"):
+                        target_url = url_entry.get("ios_url")
+                elif "android" in user_agent:
+                    if url_entry.get("android_url"):
+                        target_url = url_entry.get("android_url")
+                        
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get("user-agent", "")
+        referer = request.headers.get("referer", "Direct")
+        
+        event = {
+            "short_url": short_url,
+            "ip": client_ip,
+            "user_agent": user_agent,
+            "referer": referer,
+            "timestamp": datetime.now(UTC).isoformat()
+        }
+        
+        try:
+            start_time = datetime.now()
+            if hasattr(request.app.state, "arq_pool") and request.app.state.arq_pool:
+                await request.app.state.arq_pool.enqueue_job("record_analytics", event)
+                duration = (datetime.now() - start_time).total_seconds()
+                logger.debug(f"Queue enqueue duration: {duration:.4f}s")
+                logger.debug(f"Analytics enqueued for short_url: {short_url}")
             else:
-                if is_custom_domain:
-                    raise HTTPException(status_code=404, detail="Short URL not found on this domain")
-                
-            # 0. Premium Scheduled Activation check
-            is_premium_owned = False
-            user_tier = "free"
-            if url_entry.user_id:
-                user_tier = get_user_tier(url_entry.user_id, db_session)
-                if user_tier in ("premium", "startup", "business"):
-                    is_premium_owned = True
+                logger.warning("ARQ pool not initialized, skipped enqueueing.")
+        except Exception as eq_err:
+            logger.warning(f"Failed to enqueue analytics: {eq_err}")
 
-            if is_premium_owned and url_entry.activation_time:
-                activation_utc = url_entry.activation_time.astimezone(UTC).replace(tzinfo=None) if url_entry.activation_time.tzinfo else url_entry.activation_time
-                now_utc = datetime.now(UTC).replace(tzinfo=None)
-                if now_utc < activation_utc:
-                    if url_entry.custom_countdown_url:
-                        return RedirectResponse(url_entry.custom_countdown_url, status_code=302)
-                    else:
-                        with open(os.path.join(FRONTEND_DIR, "countdown.html"), encoding="utf-8") as f:
-                            html_content = f.read()
-                        activation_iso = activation_utc.isoformat() + "Z"
-                        html_content = html_content.replace("window.__ACTIVATION_TIME__ = null;", f"window.__ACTIVATION_TIME__ = '{activation_iso}';")
-                        return HTMLResponse(content=html_content)
-
-            # 1. Expiration check with premium fallback
-            is_expired = False
-            if url_entry.exp_time:
-                exp_utc = url_entry.exp_time.astimezone(UTC).replace(tzinfo=None) if url_entry.exp_time.tzinfo else url_entry.exp_time
-                now_utc = datetime.now(UTC).replace(tzinfo=None)
-                if exp_utc < now_utc:
-                    is_expired = True
-                    
-            if is_expired:
-                # Custom fallback redirect
-                if url_entry.fallback_url and url_entry.user_id:
-                    if user_tier in ("premium", "startup", "business"):
-                        return RedirectResponse(url_entry.fallback_url, status_code=302)
-                
-                with open(os.path.join(FRONTEND_DIR, "expired.html"), encoding="utf-8") as f:
-                    return HTMLResponse(content=f.read(), status_code=410)
-                    
-            # 2. Safety ban check
-            if url_entry.is_banned:
-                with open(os.path.join(FRONTEND_DIR, "banned.html"), encoding="utf-8") as f:
-                    return HTMLResponse(content=f.read(), status_code=403)
-                    
-            # 3. Password check
-            if url_entry.password_hash and url_entry.user_id:
-                if user_tier in ("premium", "startup", "business"):
-                    cookie_name = f"auth_link_{short_url}"
-                    auth_cookie = request.cookies.get(cookie_name)
-                    if auth_cookie != url_entry.password_hash:
-                        with open(os.path.join(FRONTEND_DIR, "password_gate.html"), encoding="utf-8") as f:
-                            return HTMLResponse(content=f.read())
-                            
-            # 4. OS targeting
-            target_url = url_entry.long_url
-            if url_entry.user_id:
-                if user_tier in ("premium", "startup", "business"):
-                    user_agent = request.headers.get("user-agent", "").lower()
-                    if "iphone" in user_agent or "ipad" in user_agent or "ipod" in user_agent:
-                        if url_entry.ios_url:
-                            target_url = url_entry.ios_url
-                    elif "android" in user_agent:
-                        if url_entry.android_url:
-                            target_url = url_entry.android_url
-                            
-            # Trigger analytics
-            client_ip = get_client_ip(request)
-            user_agent = request.headers.get("user-agent", "")
-            referer = request.headers.get("referer", "Direct")
-            backgroud_tasks.add_task(
-                record_analytics, short_url, client_ip, user_agent, referer
-            )
-            return RedirectResponse(target_url, status_code=302)
+        logger.debug(f"Redirect completed for short_url: {short_url} -> {target_url}")
+        return RedirectResponse(target_url, status_code=302)
 
     if long_url:
         client_ip = get_client_ip(request)
-        user_agent = request.headers.get("user-agent","")
-        referer = request.headers.get("referer","Direct")
-        backgroud_tasks.add_task(
-            record_analytics,short_url,client_ip,user_agent,referer
-        )
+        user_agent = request.headers.get("user-agent", "")
+        referer = request.headers.get("referer", "Direct")
+        
+        event = {
+            "short_url": short_url,
+            "ip": client_ip,
+            "user_agent": user_agent,
+            "referer": referer,
+            "timestamp": datetime.now(UTC).isoformat()
+        }
+        
+        try:
+            start_time = datetime.now()
+            if hasattr(request.app.state, "arq_pool") and request.app.state.arq_pool:
+                await request.app.state.arq_pool.enqueue_job("record_analytics", event)
+                duration = (datetime.now() - start_time).total_seconds()
+                logger.debug(f"Queue enqueue duration: {duration:.4f}s")
+                logger.debug(f"Analytics enqueued for short_url: {short_url}")
+            else:
+                logger.warning("ARQ pool not initialized, skipped enqueueing.")
+        except Exception as eq_err:
+            logger.warning(f"Failed to enqueue analytics: {eq_err}")
+
+        logger.debug(f"Redirect completed for short_url: {short_url} -> {long_url}")
         return RedirectResponse(long_url, status_code=302)
+
     raise HTTPException(status_code=404, detail="Short URL not found")
 
 
