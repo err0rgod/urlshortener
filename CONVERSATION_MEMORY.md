@@ -47,7 +47,6 @@ All frontend interface files are completed with high-impact, premium aesthetics:
 
 ## Active Rules
 - **No emojis** in code, templates, or documentation.
-- **Never touch the backend folder** when creating/modifying frontend UI files unless explicitly instructed.
 - All database inputs must use **timezone-naive UTC datetimes**.
 
 ---
