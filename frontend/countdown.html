@@ -112,13 +112,40 @@
             const minutesVal = document.getElementById('minutes');
             const secondsVal = document.getElementById('seconds');
             
+            let isChecking = false;
+            async function checkActivation() {
+                if (isChecking) return;
+                isChecking = true;
+                
+                try {
+                    const response = await fetch(window.location.href, { redirect: 'follow' });
+                    if (response.redirected || !response.url.includes(window.location.pathname)) {
+                        window.location.href = response.url;
+                        return;
+                    }
+                } catch (err) {
+                    console.error("Error checking activation:", err);
+                }
+                
+                // Still serving countdown: wait 3 seconds and retry
+                setTimeout(() => {
+                    isChecking = false;
+                    checkActivation();
+                }, 3000);
+            }
+
             function updateTimer() {
                 const now = new Date();
                 const timeDiff = targetDate.getTime() - now.getTime();
 
                 if (timeDiff <= 0) {
-                    // Time's up! Reload the page to trigger redirect
-                    window.location.reload();
+                    clearInterval(timerInterval);
+                    document.getElementById('countdown-container').innerHTML = `
+                        <div class="col-span-4 py-3 px-4 bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold animate-pulse">
+                            Activating link...
+                        </div>
+                    `;
+                    checkActivation();
                     return;
                 }
 
@@ -134,7 +161,7 @@
             }
 
             updateTimer();
-            setInterval(updateTimer, 1000);
+            const timerInterval = setInterval(updateTimer, 1000);
         }
         
         window.addEventListener('DOMContentLoaded', startCountdown);

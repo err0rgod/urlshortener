@@ -1409,7 +1409,8 @@ async def get_short_give_long(short_url: str, request : Request):
 
         # 0. Premium Scheduled Activation check
         if is_premium_owned and url_entry.get("activation_time"):
-            activation_utc = datetime.fromisoformat(url_entry.get("activation_time")).replace(tzinfo=None)
+            activation_dt = datetime.fromisoformat(url_entry.get("activation_time"))
+            activation_utc = activation_dt.astimezone(UTC).replace(tzinfo=None) if activation_dt.tzinfo else activation_dt
             now_utc = datetime.now(UTC).replace(tzinfo=None)
             if now_utc < activation_utc:
                 if url_entry.get("custom_countdown_url"):
@@ -1423,7 +1424,8 @@ async def get_short_give_long(short_url: str, request : Request):
         # 1. Expiration check with premium fallback
         is_expired = False
         if url_entry.get("exp_time"):
-            exp_utc = datetime.fromisoformat(url_entry.get("exp_time")).replace(tzinfo=None)
+            exp_dt = datetime.fromisoformat(url_entry.get("exp_time"))
+            exp_utc = exp_dt.astimezone(UTC).replace(tzinfo=None) if exp_dt.tzinfo else exp_dt
             now_utc = datetime.now(UTC).replace(tzinfo=None)
             if exp_utc < now_utc:
                 is_expired = True
