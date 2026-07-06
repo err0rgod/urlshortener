@@ -2,12 +2,7 @@
 
 docs
 
-add numbers in website and features from .link website 
-test webhook and other premium features
 add api and in app shortening 
-add optimizations from load test website 
-
-
 
 add turnstile and zerotrust on admin pages other cloud flare features 
 create web crawler for leads
