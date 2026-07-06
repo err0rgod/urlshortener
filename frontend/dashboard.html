@@ -1804,11 +1804,18 @@
                 });
                 
                 if (!response.ok) {
-                    let errMsg = "Failed to generate API Key.";
+                    let errMsg = `Failed to generate API Key (Status: ${response.status}).`;
                     try {
-                        const errData = await response.json();
-                        if (errData && errData.detail) {
-                            errMsg = errData.detail;
+                        const rawText = await response.text();
+                        try {
+                            const errData = JSON.parse(rawText);
+                            if (errData && errData.detail) {
+                                errMsg = errData.detail;
+                            }
+                        } catch (jsonErr) {
+                            if (rawText && rawText.length < 200) {
+                                errMsg = `${rawText} (Status: ${response.status})`;
+                            }
                         }
                     } catch (e) {}
                     alert(errMsg);
