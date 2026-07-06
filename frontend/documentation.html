@@ -201,6 +201,95 @@ Authorization: Bearer flx_your_api_key_here
     }
   ]
 }</pre>
+
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-6">Integration Snippets</h3>
+                <p class="text-xs text-slate-500">
+                    Choose your language to view sample code for calling our shortening API:
+                </p>
+                <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-900">
+                    <!-- Tab Headers -->
+                    <div class="flex border-b border-slate-800 bg-slate-950 px-2">
+                        <button onclick="switchLangTab('js')" id="lang-tab-js" class="px-4 py-2 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500 focus:outline-none">JavaScript</button>
+                        <button onclick="switchLangTab('py')" id="lang-tab-py" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent focus:outline-none">Python</button>
+                        <button onclick="switchLangTab('go')" id="lang-tab-go" class="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent focus:outline-none">Go (Golang)</button>
+                    </div>
+                    <!-- Tab Contents -->
+                    <div class="p-4 overflow-x-auto text-[10px] font-mono leading-relaxed">
+                        <!-- JS Snippet -->
+                        <pre id="lang-code-js" class="text-slate-100">const shortenLink = async (longUrl, customAlias) => {
+  const response = await fetch("https://flexurl.app/api/developer/links", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer flx_your_api_key_here",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      long_url: longUrl,
+      custom_alias: customAlias
+    })
+  });
+  const data = await response.json();
+  return data.short_url;
+};</pre>
+                        <!-- Python Snippet -->
+                        <pre id="lang-code-py" class="text-slate-100 hidden">import json
+import urllib.request
+
+def shorten_link(long_url, custom_alias):
+    url = "https://flexurl.app/api/developer/links"
+    headers = {
+        "Authorization": "Bearer flx_your_api_key_here",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0"  # Required for Cloudflare bypass
+    }
+    payload = {
+        "long_url": long_url,
+        "custom_alias": custom_alias
+    }
+    req = urllib.request.Request(
+        url, 
+        data=json.dumps(payload).encode("utf-8"), 
+        headers=headers, 
+        method="POST"
+    )
+    with urllib.request.urlopen(req) as res:
+        data = json.loads(res.read().decode("utf-8"))
+        return data["short_url"]</pre>
+                        <!-- Go Snippet -->
+                        <pre id="lang-code-go" class="text-slate-100 hidden">package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+)
+
+func shortenLink(longUrl, customAlias string) (string, error) {
+	url := "https://flexurl.app/api/developer/links"
+	payload := map[string]string{
+		"long_url":     longUrl,
+		"custom_alias": customAlias,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer flx_your_api_key_here")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0") // Required for Cloudflare bypass
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&result)
+	return result["short_url"].(string), nil
+}</pre>
+                    </div>
+                </div>
             </section>
 
             <!-- Section: Targeting -->
@@ -520,6 +609,22 @@ Authorization: Bearer flx_your_api_key_here
             }
             window.dispatchEvent(new Event('theme-changed'));
         });
+
+        // Switch active code tab
+        function switchLangTab(lang) {
+            const langs = ['js', 'py', 'go'];
+            langs.forEach(l => {
+                const btn = document.getElementById(`lang-tab-${l}`);
+                const code = document.getElementById(`lang-code-${l}`);
+                if (l === lang) {
+                    code.classList.remove('hidden');
+                    btn.className = "px-4 py-2 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500 focus:outline-none";
+                } else {
+                    code.classList.add('hidden');
+                    btn.className = "px-4 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 border-b-2 border-transparent focus:outline-none";
+                }
+            });
+        }
     </script>
 </body>
 </html>
