@@ -149,6 +149,9 @@
                 <button id="tab-domains-btn" onclick="switchTab('domains')" class="border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all focus:outline-none">
                     Branded Domains
                 </button>
+                <button id="tab-developer-btn" onclick="switchTab('developer')" class="border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all focus:outline-none">
+                    Developer APIs
+                </button>
             </nav>
         </div>
 
@@ -441,6 +444,40 @@
             </div>
         </div>
 
+        <!-- Developer APIs Section -->
+        <div id="developer-section" class="hidden space-y-6">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                <div class="border-b border-slate-100 pb-4 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 tracking-tight">Developer API Keys</h3>
+                        <p class="text-xs text-slate-500">Generate secure credentials to shorten links programmatically via your own applications.</p>
+                    </div>
+                </div>
+
+                <!-- API Key Generation Form -->
+                <div id="api-keys-premium-container" class="space-y-6">
+                    <form id="add-api-key-form" class="flex gap-2 max-w-md" onsubmit="event.preventDefault(); handleCreateApiKey();">
+                        <input type="text" id="api_key_name_input" placeholder="e.g. Production Blog Key" required
+                            class="flex-grow px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+                            Generate API Key
+                        </button>
+                    </form>
+
+                    <!-- Active API Keys List -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Credentials</h4>
+                        <div id="api-keys-empty-state" class="p-6 border border-dashed border-slate-200 rounded-xl text-center">
+                            <p class="text-xs text-slate-400">No developer API keys generated yet. Add one above to get started.</p>
+                        </div>
+                        <div id="api-keys-list" class="space-y-2 hidden">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Custom Confirmation Modal -->
@@ -546,6 +583,25 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- API Key Display Modal -->
+    <div id="api-key-display-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <h3 class="text-sm font-bold text-slate-900">API Key Generated Successfully</h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+                Please copy your API key now. For your security, this key will <strong>never</strong> be shown again.
+            </p>
+            <div class="flex gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3 items-center">
+                <code id="api-key-code-block" class="text-xs font-mono text-slate-800 break-all select-all flex-grow"></code>
+                <button onclick="copyApiKeyToClipboard()" class="text-indigo-600 hover:text-indigo-700 text-xs font-semibold px-2 py-1 flex-shrink-0">Copy</button>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeApiKeyDisplayModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors">
+                    Done
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1156,7 +1212,7 @@
 
         // Switch tab
         function switchTab(tab) {
-            const tabs = ['links', 'activity', 'profile', 'domains'];
+            const tabs = ['links', 'activity', 'profile', 'domains', 'developer'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-${t}-btn`);
                 const sec = document.getElementById(`${t}-section`);
@@ -1178,6 +1234,9 @@
             } else if (tab === 'domains') {
                 fetchAndRenderDomains();
                 startDomainPolling();
+            } else if (tab === 'developer') {
+                stopDomainPolling();
+                fetchAndRenderApiKeys();
             } else {
                 stopDomainPolling();
             }
@@ -1671,6 +1730,129 @@
             }
             window.dispatchEvent(new Event('theme-changed'));
         });
+
+        // Developer API Key credentials methods
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        async function fetchAndRenderApiKeys() {
+            if (!userDetails) return;
+
+            try {
+                const response = await fetch('/api/developer/keys');
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        document.getElementById('api-keys-premium-container').innerHTML = `
+                            <div class="p-6 border border-indigo-100 bg-indigo-50/50 rounded-xl text-center space-y-3">
+                                <p class="text-xs text-slate-600">Developer API Keys are only available on premium plans. Upgrade to Startup Choice or Business Pro to create API keys.</p>
+                                <button onclick="startUpgrade('startup')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors">Upgrade Plan</button>
+                            </div>
+                        `;
+                    }
+                    return;
+                }
+                const data = await response.json();
+                const emptyState = document.getElementById('api-keys-empty-state');
+                const listContainer = document.getElementById('api-keys-list');
+                
+                if (!data || data.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    listContainer.classList.add('hidden');
+                    listContainer.innerHTML = '';
+                    return;
+                }
+                
+                emptyState.classList.add('hidden');
+                listContainer.classList.remove('hidden');
+                
+                listContainer.innerHTML = data.map(k => {
+                    const createdStr = k.created_at ? new Date(k.created_at).toLocaleDateString() : 'N/A';
+                    return `
+                        <div class="flex justify-between items-center p-4 border border-slate-200 rounded-xl bg-slate-50/50">
+                            <div>
+                                <p class="text-xs font-bold text-slate-800">${escapeHtml(k.name)}</p>
+                                <p class="text-[10px] text-slate-500">Created: ${createdStr}</p>
+                            </div>
+                            <button onclick="handleRevokeApiKey(${k.id})" class="text-rose-600 hover:text-rose-800 text-[11px] font-semibold border border-rose-200 hover:border-rose-400 bg-white px-3 py-1 rounded-lg transition-all">
+                                Revoke
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Error fetching API keys: ", err);
+            }
+        }
+
+        async function handleCreateApiKey() {
+            const input = document.getElementById('api_key_name_input');
+            const name = input.value.trim();
+            if (!name) return;
+            
+            try {
+                const response = await fetch('/api/developer/keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                
+                if (!response.ok) {
+                    alert("Failed to generate API Key.");
+                    return;
+                }
+                
+                const data = await response.json();
+                input.value = '';
+                
+                // Show display modal with raw key
+                document.getElementById('api-key-code-block').innerText = data.raw_key;
+                document.getElementById('api-key-display-modal').classList.remove('hidden');
+                
+                fetchAndRenderApiKeys();
+            } catch (err) {
+                console.error("Error generating API key: ", err);
+            }
+        }
+
+        async function handleRevokeApiKey(keyId) {
+            if (!confirm("Are you sure you want to revoke this API key? Any applications currently using this key will immediately lose access.")) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/developer/keys/${keyId}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    fetchAndRenderApiKeys();
+                } else {
+                    alert("Failed to revoke API key.");
+                }
+            } catch (err) {
+                console.error("Error revoking API key: ", err);
+            }
+        }
+
+        function closeApiKeyDisplayModal() {
+            document.getElementById('api-key-display-modal').classList.add('hidden');
+            document.getElementById('api-key-code-block').innerText = '';
+        }
+
+        function copyApiKeyToClipboard() {
+            const code = document.getElementById('api-key-code-block').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                alert("API Key copied to clipboard!");
+            }).catch(err => {
+                console.error("Failed to copy API key: ", err);
+            });
+        }
     </script>
 </body>
 </html>

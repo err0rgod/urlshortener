@@ -150,3 +150,38 @@ class PaymentVerifyRequest(BaseModel):
 
 class CustomDomainRequest(BaseModel):
     domain_name: str
+
+
+class ApiKey(SQLModel, table=True):
+    """
+    Stores hashed developer API keys for programmatic access.
+    """
+    __tablename__ = "api_keys"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    key_hash: str = Field(index=True, unique=True, nullable=False)
+    name: str = Field(max_length=255, nullable=False)
+    user_id: int = Field(foreign_key="users.id", nullable=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    is_active: bool = Field(default=True)
+
+
+class APIKeyCreateRequest(BaseModel):
+    name: str = Field(..., max_length=255)
+
+
+class DeveloperURLRequest(BaseModel):
+    long_url: str = Field(..., max_length=2048)
+    custom_alias: Optional[str] = Field(None, max_length=20)
+    webhook_url: Optional[str] = Field(None, max_length=2048)
+    ios_url: Optional[str] = Field(None, max_length=2048)
+    android_url: Optional[str] = Field(None, max_length=2048)
+    password: Optional[str] = Field(None, max_length=255)
+    fallback_url: Optional[str] = Field(None, max_length=2048)
+    activation_time: Optional[str] = Field(None)
+    custom_countdown_url: Optional[str] = Field(None, max_length=2048)
+    domain: Optional[str] = Field(None, max_length=255)
+
+
+class DeveloperBatchURLRequest(BaseModel):
+    links: list[DeveloperURLRequest]

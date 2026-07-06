@@ -67,6 +67,7 @@
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mt-6 mb-2">Premium Features</p>
                 <button onclick="scrollToSection('expiry')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="expiry">Expiration & Fallbacks</button>
                 <button onclick="scrollToSection('webhook')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="webhook">Real-Time Webhooks</button>
+                <button onclick="scrollToSection('developer-api')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="developer-api">Developer APIs</button>
                 <button onclick="scrollToSection('targeting')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="targeting">Device Targeting</button>
                 <button onclick="scrollToSection('passcode')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="passcode">Passcode Protection</button>
                 <button onclick="scrollToSection('scheduling')" class="w-full text-left px-3 py-2 rounded-lg text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all text-slate-600 dark:text-slate-300 nav-btn" data-sec="scheduling">Scheduled Activation</button>
@@ -142,6 +143,63 @@
   "device": "Desktop",
   "referer": "X/Twitter",
   "is_bot": false
+}</pre>
+            </section>
+
+            <!-- Section: Developer APIs -->
+            <section id="sec-developer-api" class="scroll-mt-24 space-y-4">
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">Developer API Key Integration</h2>
+                <p class="text-sm text-slate-500 leading-relaxed">
+                    Integrate URL shortening capabilities directly into your own web applications, CMS platforms, or blogging engines. Developers can generate API keys from the FlexURL dashboard credentials panel to authenticate their HTTP requests programmatically.
+                </p>
+                
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-4">Authentication</h3>
+                <p class="text-xs text-slate-500">
+                    Include your API key as a Bearer token in the <code>Authorization</code> header or under the <code>X-API-Key</code> header of your requests:
+                </p>
+                <pre class="bg-slate-900 text-slate-100 text-[10px] font-mono p-4 rounded-xl overflow-x-auto leading-relaxed border border-slate-800">Authorization: Bearer flx_your_api_key_here</pre>
+
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-4">1. Shorten Link Programmatically</h3>
+                <p class="text-xs text-slate-500">
+                    Send a <code>POST</code> request to <code>/api/developer/links</code> with your parameters:
+                </p>
+                <pre class="bg-slate-900 text-slate-100 text-[10px] font-mono p-4 rounded-xl overflow-x-auto leading-relaxed border border-slate-800">POST /api/developer/links
+Content-Type: application/json
+Authorization: Bearer flx_your_api_key_here
+
+{
+  "long_url": "https://your-site.com/blogs/my-first-post",
+  "custom_alias": "first-post",
+  "webhook_url": "https://your-site.com/webhooks/clicks"
+}</pre>
+                <p class="text-xs text-slate-500">Response Payload:</p>
+                <pre class="bg-slate-900 text-slate-100 text-[10px] font-mono p-4 rounded-xl overflow-x-auto leading-relaxed border border-slate-800">{
+  "status": "success",
+  "short_url": "https://flexurl.app/first-post",
+  "short_code": "first-post",
+  "long_url": "https://your-site.com/blogs/my-first-post",
+  "created_at": "2026-07-06T14:15:00Z"
+}</pre>
+
+                <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-4">2. Bulk Link Shortening (Batch API)</h3>
+                <p class="text-xs text-slate-500">
+                    Send a <code>POST</code> request to <code>/api/developer/links/batch</code> to shorten up to 50 links in a single HTTP request:
+                </p>
+                <pre class="bg-slate-900 text-slate-100 text-[10px] font-mono p-4 rounded-xl overflow-x-auto leading-relaxed border border-slate-800">POST /api/developer/links/batch
+Content-Type: application/json
+Authorization: Bearer flx_your_api_key_here
+
+{
+  "links": [
+    {
+      "long_url": "https://your-site.com/blogs/article-1",
+      "custom_alias": "art-1"
+    },
+    {
+      "long_url": "https://your-site.com/blogs/article-2",
+      "custom_alias": "art-2"
+    }
+  ]
 }</pre>
             </section>
 

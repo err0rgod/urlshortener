@@ -58,6 +58,102 @@ def get_required_user_id(request: Request) -> int:
     return user_id
 
 
+async def get_developer_user_id(request: Request) -> int:
+    import hashlib
+    # 1. Extract API Key
+    auth_header = request.headers.get("Authorization")
+    raw_key = None
+    if auth_header and auth_header.startswith("Bearer "):
+        raw_key = auth_header[7:]
+    else:
+        raw_key = request.headers.get("X-API-Key")
+        
+    if not raw_key:
+        raise HTTPException(status_code=401, detail="Missing API Key in Authorization header or X-API-Key header")
+        
+    # 2. Hash raw key
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    
+    # 3. Check Redis Cache
+    from short_url_gen import redis_client
+    try:
+        cached = redis_client.get(f"api_key:{key_hash}")
+        if cached:
+            val = cached.decode() if isinstance(cached, bytes) else cached
+            parts = val.split(":")
+            if len(parts) == 2:
+                u_id, tier = int(parts[0]), parts[1]
+                if tier in ("premium", "startup", "business"):
+                    # 4. Developer Rate Limiting
+                    rate_limit = 60
+                    if tier == "startup":
+                        rate_limit = 180
+                    elif tier == "business":
+                        rate_limit = 600
+                        
+                    rate_key = f"api_limit:{u_id}:{datetime.now(UTC).minute}"
+                    current_reqs = redis_client.incr(rate_key)
+                    if current_reqs == 1:
+                        redis_client.expire(rate_key, 60)
+                    if current_reqs > rate_limit:
+                        raise HTTPException(
+                            status_code=429,
+                            detail=f"API Rate limit exceeded ({rate_limit} requests/minute). Please upgrade or reduce request frequency."
+                        )
+                    return u_id
+                raise HTTPException(status_code=403, detail="Developer API access requires a premium subscription.")
+    except HTTPException:
+        raise
+    except Exception as re:
+        logger.warning(f"Redis offline for API key check: {re}")
+        
+    # 5. Check PostgreSQL DB
+    with Session(engine) as db_session:
+        from models import ApiKey
+        statement = select(ApiKey).where(ApiKey.key_hash == key_hash, ApiKey.is_active == True)
+        api_key_entry = db_session.exec(statement).first()
+        if not api_key_entry:
+            raise HTTPException(status_code=401, detail="Invalid or revoked API Key")
+            
+        user = db_session.get(User, api_key_entry.user_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="User associated with key not found")
+            
+        tier = get_user_tier(user.id, db_session)
+        if tier not in ("premium", "startup", "business"):
+            raise HTTPException(status_code=403, detail="Developer API access requires a premium subscription.")
+            
+        # 6. Cache in Redis
+        try:
+            redis_client.set(f"api_key:{key_hash}", f"{user.id}:{tier}", ex=86400)
+        except Exception as re:
+            logger.warning(f"Failed to cache API key: {re}")
+            
+        # 7. Check Developer Rate Limiting (DB hit path)
+        rate_limit = 60
+        if tier == "startup":
+            rate_limit = 180
+        elif tier == "business":
+            rate_limit = 600
+            
+        rate_key = f"api_limit:{user.id}:{datetime.now(UTC).minute}"
+        try:
+            current_reqs = redis_client.incr(rate_key)
+            if current_reqs == 1:
+                redis_client.expire(rate_key, 60)
+            if current_reqs > rate_limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"API Rate limit exceeded ({rate_limit} requests/minute). Please upgrade or reduce request frequency."
+                )
+        except HTTPException:
+            raise
+        except Exception as re:
+            logger.warning(f"Failed to check developer rate limits: {re}")
+            
+        return user.id
+
+
 # get_user_tier is imported from short_url_gen
 
 import razorpay
@@ -1741,6 +1837,254 @@ async def post_password_gate(short_url: str, request: Request):
             return response
         else:
             return RedirectResponse(url=f"/{short_url}?error=1", status_code=303)
+
+
+# Developer API credentials endpoints
+@app.get("/api/developer/keys")
+async def get_api_keys(user_id: int = Depends(get_required_user_id)):
+    with Session(engine) as db_session:
+        from models import ApiKey
+        statement = select(ApiKey).where(ApiKey.user_id == user_id, ApiKey.is_active == True)
+        keys = db_session.exec(statement).all()
+        return [
+            {
+                "id": k.id,
+                "name": k.name,
+                "created_at": k.created_at.isoformat() if k.created_at else None
+            }
+            for k in keys
+        ]
+
+
+@app.post("/api/developer/keys")
+async def create_api_key(request: APIKeyCreateRequest, user_id: int = Depends(get_required_user_id)):
+    import secrets
+    with Session(engine) as db_session:
+        tier = get_user_tier(user_id, db_session)
+        if tier not in ("premium", "startup", "business"):
+            raise HTTPException(status_code=403, detail="Developer API keys require a premium subscription")
+            
+        raw_key = f"flx_{secrets.token_hex(24)}"
+        key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+        
+        from models import ApiKey
+        new_key = ApiKey(
+            key_hash=key_hash,
+            name=request.name,
+            user_id=user_id
+        )
+        db_session.add(new_key)
+        db_session.commit()
+        db_session.refresh(new_key)
+        
+        return {
+            "status": "success",
+            "key_name": new_key.name,
+            "raw_key": raw_key,
+            "created_at": new_key.created_at.isoformat()
+        }
+
+
+@app.delete("/api/developer/keys/{key_id}")
+async def revoke_api_key(key_id: int, user_id: int = Depends(get_required_user_id)):
+    with Session(engine) as db_session:
+        from models import ApiKey
+        key_entry = db_session.get(ApiKey, key_id)
+        if not key_entry or key_entry.user_id != user_id:
+            raise HTTPException(status_code=404, detail="API Key not found")
+            
+        key_entry.is_active = False
+        db_session.add(key_entry)
+        db_session.commit()
+        
+        from short_url_gen import redis_client
+        try:
+            redis_client.delete(f"api_key:{key_entry.key_hash}")
+        except Exception:
+            pass
+            
+        return {"status": "success", "message": "API Key revoked successfully"}
+
+
+# Programmatic Link Shortening endpoints
+@app.post("/api/developer/links")
+async def developer_shorten_link(
+    request: DeveloperURLRequest,
+    req: Request,
+    background_tasks: BackgroundTasks,
+    user_id: int = Depends(get_developer_user_id)
+):
+    long_url = request.long_url
+    if not await is_valid_url(long_url):
+        raise HTTPException(status_code=400, detail="Invalid, insecure, or private URL")
+        
+    custom_alias = request.custom_alias
+    if custom_alias:
+        if not is_valid_custom_alias(custom_alias):
+            raise HTTPException(
+                status_code=400, 
+                detail="Custom alias must be 3-20 characters long and contain only letters, numbers, dashes, or underscores."
+            )
+        from database import is_alias_exists
+        if is_alias_exists(custom_alias):
+            raise HTTPException(status_code=400, detail="Custom alias is already in use")
+            
+    activation_time = None
+    if request.activation_time:
+        try:
+            dt = datetime.fromisoformat(request.activation_time)
+            activation_time = dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid activation time format. Must be ISO string.")
+            
+    for url_val in (request.webhook_url, request.ios_url, request.android_url, request.fallback_url, request.custom_countdown_url):
+        if url_val and not await is_valid_url(url_val):
+            raise HTTPException(status_code=400, detail="Invalid, insecure, or private URL in parameters")
+            
+    password_hash = None
+    if request.password:
+        salt = "flexurl_salt_secure_2026"
+        password_hash = hashlib.sha256((request.password + salt).encode('utf-8')).hexdigest()
+        
+    selected_domain = None
+    if request.domain and request.domain != "flexurl.app":
+        with Session(engine) as db_session:
+            stmt = select(CustomDomain).where(CustomDomain.domain_name == request.domain).where(CustomDomain.user_id == user_id).where(CustomDomain.is_verified == True)
+            dom_entry = db_session.exec(stmt).first()
+            if not dom_entry:
+                raise HTTPException(status_code=400, detail="Domain is either unverified or does not belong to you.")
+        selected_domain = request.domain
+        
+    from short_url_gen import add_custom_url, add_url
+    if custom_alias:
+        short_code = add_custom_url(
+            long_url, custom_alias, user_id=user_id, exp_time=None,
+            webhook_url=request.webhook_url, ios_url=request.ios_url, android_url=request.android_url,
+            password_hash=password_hash, fallback_url=request.fallback_url,
+            activation_time=activation_time, custom_countdown_url=request.custom_countdown_url,
+            domain=selected_domain
+        )
+    else:
+        short_code = add_url(
+            long_url, user_id=user_id, exp_time=None,
+            webhook_url=request.webhook_url, ios_url=request.ios_url, android_url=request.android_url,
+            password_hash=password_hash, fallback_url=request.fallback_url,
+            activation_time=activation_time, custom_countdown_url=request.custom_countdown_url,
+            domain=selected_domain
+        )
+        
+    background_tasks.add_task(background_safe_browsing_check, short_code, long_url)
+    
+    domain_host = selected_domain if selected_domain else req.headers.get("Host", "flexurl.app")
+    proto = "https" if req.headers.get("X-Forwarded-Proto") == "https" else req.url.scheme
+    full_short_url = f"{proto}://{domain_host}/{short_code}"
+    
+    return {
+        "status": "success",
+        "short_url": full_short_url,
+        "short_code": short_code,
+        "long_url": long_url,
+        "created_at": datetime.now(UTC).isoformat()
+    }
+
+
+@app.post("/api/developer/links/batch")
+async def developer_batch_shorten(
+    request: DeveloperBatchURLRequest,
+    req: Request,
+    background_tasks: BackgroundTasks,
+    user_id: int = Depends(get_developer_user_id)
+):
+    if len(request.links) > 50:
+        raise HTTPException(status_code=400, detail="Batch size cannot exceed 50 links per request.")
+        
+    results = []
+    for link_req in request.links:
+        try:
+            long_url = link_req.long_url
+            if not await is_valid_url(long_url):
+                results.append({"status": "error", "long_url": long_url, "error": "Invalid, insecure, or private URL"})
+                continue
+                
+            custom_alias = link_req.custom_alias
+            if custom_alias:
+                if not is_valid_custom_alias(custom_alias):
+                    results.append({"status": "error", "long_url": long_url, "error": "Invalid custom alias format"})
+                    continue
+                from database import is_alias_exists
+                if is_alias_exists(custom_alias):
+                    results.append({"status": "error", "long_url": long_url, "error": "Custom alias is already in use"})
+                    continue
+                    
+            activation_time = None
+            if link_req.activation_time:
+                try:
+                    dt = datetime.fromisoformat(link_req.activation_time)
+                    activation_time = dt.astimezone(UTC).replace(tzinfo=None) if dt.tzinfo else dt
+                except ValueError:
+                    results.append({"status": "error", "long_url": long_url, "error": "Invalid activation time format"})
+                    continue
+                    
+            invalid_param = False
+            for url_val in (link_req.webhook_url, link_req.ios_url, link_req.android_url, link_req.fallback_url, link_req.custom_countdown_url):
+                if url_val and not await is_valid_url(url_val):
+                    results.append({"status": "error", "long_url": long_url, "error": "Invalid URL in premium parameters"})
+                    invalid_param = True
+                    break
+            if invalid_param:
+                continue
+                
+            password_hash = None
+            if link_req.password:
+                salt = "flexurl_salt_secure_2026"
+                password_hash = hashlib.sha256((link_req.password + salt).encode('utf-8')).hexdigest()
+                
+            selected_domain = None
+            if link_req.domain and link_req.domain != "flexurl.app":
+                with Session(engine) as db_session:
+                    stmt = select(CustomDomain).where(CustomDomain.domain_name == link_req.domain).where(CustomDomain.user_id == user_id).where(CustomDomain.is_verified == True)
+                    dom_entry = db_session.exec(stmt).first()
+                    if not dom_entry:
+                        results.append({"status": "error", "long_url": long_url, "error": "Domain is unverified or does not belong to you"})
+                        continue
+                selected_domain = link_req.domain
+                
+            from short_url_gen import add_custom_url, add_url
+            if custom_alias:
+                short_code = add_custom_url(
+                    long_url, custom_alias, user_id=user_id, exp_time=None,
+                    webhook_url=link_req.webhook_url, ios_url=link_req.ios_url, android_url=link_req.android_url,
+                    password_hash=password_hash, fallback_url=link_req.fallback_url,
+                    activation_time=activation_time, custom_countdown_url=link_req.custom_countdown_url,
+                    domain=selected_domain
+                )
+            else:
+                short_code = add_url(
+                    long_url, user_id=user_id, exp_time=None,
+                    webhook_url=link_req.webhook_url, ios_url=link_req.ios_url, android_url=link_req.android_url,
+                    password_hash=password_hash, fallback_url=link_req.fallback_url,
+                    activation_time=activation_time, custom_countdown_url=link_req.custom_countdown_url,
+                    domain=selected_domain
+                )
+                
+            background_tasks.add_task(background_safe_browsing_check, short_code, long_url)
+            
+            domain_host = selected_domain if selected_domain else req.headers.get("Host", "flexurl.app")
+            proto = "https" if req.headers.get("X-Forwarded-Proto") == "https" else req.url.scheme
+            full_short_url = f"{proto}://{domain_host}/{short_code}"
+            
+            results.append({
+                "status": "success",
+                "short_url": full_short_url,
+                "short_code": short_code,
+                "long_url": long_url,
+                "created_at": datetime.now(UTC).isoformat()
+            })
+        except Exception as err:
+            results.append({"status": "error", "long_url": link_req.long_url, "error": str(err)})
+            
+    return {"results": results}
+
 
 
 
