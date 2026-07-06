@@ -724,8 +724,8 @@
 
             links.forEach(link => {
                 let domainHost = window.location.host;
-                if (userDomains && userDomains.length > 0) {
-                    domainHost = userDomains[0].domain_name;
+                if (link.domain && link.domain !== "flexurl.app") {
+                    domainHost = link.domain;
                 }
                 const fullShortUrl = window.location.protocol + '//' + domainHost + '/' + link.short_url;
                 const displayUrl = domainHost + '/' + link.short_url;

@@ -536,6 +536,7 @@ async def get_url_analytics(short_url: str, user_id: int = Depends(get_required_
         return {
             "short_url": url_entry.short_url,
             "long_url": url_entry.long_url,
+            "domain": url_entry.domain,
             "created_at": url_entry.created_at.isoformat() if url_entry.created_at else None,
             "total_clicks": total_clicks,
             "by_date": by_date,
@@ -821,6 +822,7 @@ async def get_user_links(user_id: int = Depends(get_required_user_id)):
             result.append({
                 "short_url": link.short_url,
                 "long_url": link.long_url,
+                "domain": link.domain,
                 "created_at": link.created_at.isoformat() if link.created_at else None,
                 "click_count": link.click_count,
                 "is_banned": link.is_banned,

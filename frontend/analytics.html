@@ -383,10 +383,14 @@
                 document.getElementById('loading-state').classList.add('hidden');
                 document.getElementById('analytics-content').classList.remove('hidden');
 
+                // Resolve correct URL
+                const domainHost = (data.domain && data.domain !== "flexurl.app") ? data.domain : window.location.host;
+                const fullShortUrl = window.location.protocol + '//' + domainHost + '/' + data.short_url;
+
                 // Copy button functionality
                 const copyBtn = document.getElementById('copy-btn');
                 copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(window.location.origin + '/' + data.short_url);
+                    navigator.clipboard.writeText(fullShortUrl);
                     const originalSvg = copyBtn.innerHTML;
                     copyBtn.innerHTML = `<svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
                     setTimeout(() => copyBtn.innerHTML = originalSvg, 2000);
@@ -407,7 +411,9 @@
             const activeClicks = excludeBots ? Math.max(0, totalClicks - botClicks) : totalClicks;
 
             // Populate Headers & Info
-            document.getElementById('display-short-url').textContent = window.location.origin + '/' + data.short_url;
+            const domainHost = (data.domain && data.domain !== "flexurl.app") ? data.domain : window.location.host;
+            const fullShortUrl = window.location.protocol + '//' + domainHost + '/' + data.short_url;
+            document.getElementById('display-short-url').textContent = fullShortUrl;
             const longUrlEl = document.getElementById('display-long-url');
             longUrlEl.href = data.long_url;
             longUrlEl.textContent = data.long_url;
