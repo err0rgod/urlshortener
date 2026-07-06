@@ -132,14 +132,16 @@
                     When specified, the router posts a JSON payload to your webhook endpoint asynchronously during redirection:
                 </p>
                 <pre class="bg-slate-900 text-slate-100 text-[10px] font-mono p-4 rounded-xl overflow-x-auto leading-relaxed border border-slate-800">{
-  "event": "link.redirect",
-  "short_code": "x8a2f",
-  "visitor": {
-    "ip_country": "IN",
-    "device_type": "mobile",
-    "client_os": "Android",
-    "referer": "https://t.co/"
-  }
+  "short_url": "xyz",
+  "long_url": "https://example.com/target-page",
+  "clicked_at": "2026-07-06T08:30:00.123456Z",
+  "ip_address": "8.8.8.8",
+  "country": "United States",
+  "city": "Mountain View",
+  "browser": "Chrome",
+  "device": "Desktop",
+  "referer": "X/Twitter",
+  "is_bot": false
 }</pre>
             </section>
 
