@@ -1804,7 +1804,14 @@
                 });
                 
                 if (!response.ok) {
-                    alert("Failed to generate API Key.");
+                    let errMsg = "Failed to generate API Key.";
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.detail) {
+                            errMsg = errData.detail;
+                        }
+                    } catch (e) {}
+                    alert(errMsg);
                     return;
                 }
                 
@@ -1818,6 +1825,7 @@
                 fetchAndRenderApiKeys();
             } catch (err) {
                 console.error("Error generating API key: ", err);
+                alert("Failed to generate API Key due to a network error.");
             }
         }
 
