@@ -124,6 +124,7 @@ async def record_analytics(ctx, event: dict):
         referer=clean_referer,
         is_bot=is_bot
     )
+    clicked_at_dt = log.clicked_at or datetime.now(UTC)
     
     # 3. Write Click Log to DB (best effort)
     try:
@@ -155,7 +156,7 @@ async def record_analytics(ctx, event: dict):
                     webhook_payload = {
                         "short_url": url_entry.short_url,
                         "long_url": url_entry.long_url,
-                        "clicked_at": log.clicked_at.isoformat() if log.clicked_at else datetime.now(UTC).isoformat(),
+                        "clicked_at": clicked_at_dt.isoformat(),
                         "ip_address": ip_address,
                         "country": country,
                         "city": city,
