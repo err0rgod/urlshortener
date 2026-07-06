@@ -158,12 +158,12 @@ class ApiKey(SQLModel, table=True):
     """
     __tablename__ = "api_keys"
     
-    id: Optional[int] = Field(default=None, primary_key=True)
-    key_hash: str = Field(index=True, unique=True, nullable=False)
-    name: str = Field(max_length=255, nullable=False)
-    user_id: int = Field(foreign_key="users.id", nullable=False)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
-    is_active: bool = Field(default=True)
+    id: Optional[int] = SQLField(default=None, primary_key=True)
+    key_hash: str = SQLField(index=True, unique=True, nullable=False)
+    name: str = SQLField(max_length=255, nullable=False)
+    user_id: int = SQLField(foreign_key="users.id", nullable=False)
+    created_at: datetime = SQLField(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    is_active: bool = SQLField(default=True)
 
 
 class APIKeyCreateRequest(BaseModel):
