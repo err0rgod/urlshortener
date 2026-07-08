@@ -134,6 +134,24 @@
             </div>
         </div>
 
+        <!-- Trial Period Alert Banner -->
+        <div id="trial-alert-banner" class="hidden p-4 border rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all">
+            <div class="flex items-start gap-3 text-left">
+                <div id="trial-banner-icon" class="p-2 rounded-lg flex-shrink-0">
+                    <!-- SVG Icon set dynamically -->
+                </div>
+                <div class="space-y-0.5">
+                    <h4 id="trial-banner-title" class="text-xs font-bold text-slate-900"></h4>
+                    <p id="trial-banner-desc" class="text-[11px] text-slate-500"></p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="trial-action-btn" onclick="startUpgrade('startup')" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                    Upgrade to Premium
+                </button>
+            </div>
+        </div>
+
         <!-- Navigation Tabs -->
         <div class="border-b border-slate-200">
             <nav class="flex space-x-8" aria-label="Tabs">
@@ -333,6 +351,9 @@
                                 <span id="profile-expiry-value" class="text-slate-700 font-semibold">-</span>
                             </div>
                             <div id="upgrade-button-container" class="mt-4 pt-4 border-t border-slate-150 hidden space-y-2">
+                                <button id="trial-checkout-btn" onclick="startTrialCheckout()" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide hidden">
+                                    Start 14-day Trial (₹9)
+                                </button>
                                 <button onclick="startUpgrade('startup')" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
                                     Startup Choice ($19)
                                 </button>
@@ -700,6 +721,18 @@
                             }
                         }
                         
+                        // Toggle trial checkout button visibility
+                        const trialBtn = document.getElementById('trial-checkout-btn');
+                        if (trialBtn) {
+                            if (data.user.tier === 'free' && !data.user.has_used_trial) {
+                                trialBtn.classList.remove('hidden');
+                            } else {
+                                trialBtn.classList.add('hidden');
+                            }
+                        }
+
+                        renderTrialBanner(data.user);
+                        
                         const params = new URLSearchParams(window.location.search);
                         const hasPremiumTier = ['premium', 'startup', 'business'].includes(data.user.tier);
                         if (params.get('upgrade') === '1' && !hasPremiumTier) {
@@ -939,7 +972,7 @@
                 });
                 if (!response.ok) {
                     const data = await response.json();
-                    alert(data.detail || "Failed to initiate payment");
+                    showCustomAlert(data.detail || "Failed to initiate payment");
                     return;
                 }
                 const orderData = await response.json();
@@ -966,14 +999,14 @@
                             });
                             if (!verifyResponse.ok) {
                                 const verifyData = await verifyResponse.json();
-                                alert(verifyData.detail || "Payment verification failed");
+                                showCustomAlert(verifyData.detail || "Payment verification failed");
                                 return;
                             }
-                            alert("Payment Successful! Upgraded to Premium.");
+                            showCustomAlert("Payment Successful! Upgraded to Premium.");
                             window.location.reload();
                         } catch (err) {
                             console.error("Verification call failed:", err);
-                            alert("Verification connection failed");
+                            showCustomAlert("Verification connection failed");
                         }
                     },
                     prefill: {
@@ -987,12 +1020,121 @@
                 
                 const rzp = new Razorpay(options);
                 rzp.on('payment.failed', function (resp){
-                    alert("Payment failed: " + resp.error.description);
+                    showCustomAlert("Payment failed: " + resp.error.description);
                 });
                 rzp.open();
             } catch (err) {
                 console.error("Upgrade flow failed:", err);
-                alert("Failed to contact payment gateway");
+                showCustomAlert("Failed to contact payment gateway");
+            }
+        }
+
+        async function startTrialCheckout() {
+            try {
+                const response = await fetch('/api/payments/create-trial-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    showCustomAlert(data.detail || "Failed to initiate trial payment");
+                    return;
+                }
+                const orderData = await response.json();
+                
+                const options = {
+                    key: orderData.key_id,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "FlexURL Trial",
+                    description: "₹9 for 14 days of Premium features",
+                    order_id: orderData.order_id,
+                    handler: async function (paymentResponse) {
+                        try {
+                            const verifyResponse = await fetch('/api/payments/verify', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                    razorpay_signature: paymentResponse.razorpay_signature
+                                })
+                            });
+                            if (!verifyResponse.ok) {
+                                const verifyData = await verifyResponse.json();
+                                showCustomAlert(verifyData.detail || "Trial payment verification failed");
+                                return;
+                            }
+                            showCustomAlert("Payment Successful! Trial activated.");
+                            window.location.reload();
+                        } catch (err) {
+                            console.error("Verification call failed:", err);
+                        }
+                    },
+                    prefill: {
+                        name: document.getElementById('profile-name').textContent,
+                        email: document.getElementById('profile-email').textContent
+                    },
+                    theme: {
+                        color: "#4f46e5"
+                    }
+                };
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (resp){
+                    showCustomAlert("Payment failed: " + resp.error.description);
+                });
+                rzp.open();
+            } catch (err) {
+                console.error("Trial checkout initiation failed:", err);
+                showCustomAlert("Failed to contact payment gateway");
+            }
+        }
+
+        function renderTrialBanner(user) {
+            const banner = document.getElementById('trial-alert-banner');
+            if (!banner) return;
+            
+            if (!user || !user.is_trial) {
+                banner.classList.add('hidden');
+                return;
+            }
+            
+            banner.classList.remove('hidden');
+            const title = document.getElementById('trial-banner-title');
+            const desc = document.getElementById('trial-banner-desc');
+            const icon = document.getElementById('trial-banner-icon');
+            const btn = document.getElementById('trial-action-btn');
+            
+            const remaining = user.days_remaining;
+            
+            if (remaining <= 3) {
+                // Critical Alert (last 3 days)
+                banner.className = "p-4 border border-rose-100 bg-rose-50/50 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all";
+                icon.className = "p-2 rounded-lg flex-shrink-0 bg-rose-100 text-rose-600";
+                icon.innerHTML = `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+                
+                title.textContent = "Your ₹9 Premium Trial ends soon!";
+                desc.textContent = `Only ${remaining} days remaining. Upgrade to a standard subscription plan to keep your links and custom domains active!`;
+                
+                btn.textContent = "Upgrade Plan";
+                btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-600 hover:bg-rose-700 text-white transition-colors flex items-center justify-center";
+                btn.onclick = () => startUpgrade('startup');
+            } else {
+                // Standard Trial Alert
+                banner.className = "p-4 border border-indigo-100 bg-indigo-50/50 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all";
+                icon.className = "p-2 rounded-lg flex-shrink-0 bg-indigo-100 text-indigo-600";
+                icon.innerHTML = `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+                
+                title.textContent = "Active ₹9 Premium Trial";
+                desc.textContent = `You are enjoying Premium features. Your trial ends in ${remaining} days.`;
+                
+                btn.textContent = "Upgrade Plan";
+                btn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors flex items-center justify-center";
+                btn.onclick = () => startUpgrade('startup');
             }
         }
 

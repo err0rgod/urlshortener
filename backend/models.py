@@ -20,6 +20,7 @@ class User(SQLModel, table=True):
     tier: str = Field(default="free")  # Account tier: 'free' or 'premium'
     plan_expires_at: Optional[datetime] = Field(default=None, nullable=True)
     relaxation_days_remaining: int = Field(default=7, nullable=False)
+    has_used_trial: bool = Field(default=False)
 
 class urldata(SQLModel, table=True):
     """
@@ -121,6 +122,7 @@ class Subscription(SQLModel, table=True):
     dunning_warn_sent: bool = SQLField(default=False)
     dunning_expired_sent: bool = SQLField(default=False)
     dunning_ended_sent: bool = SQLField(default=False)
+    is_trial: bool = SQLField(default=False)
 
 
 class QuoteRequest(BaseModel):

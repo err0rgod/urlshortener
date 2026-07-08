@@ -52,6 +52,8 @@ def init_db():
                     dunning_ended_sent BOOLEAN DEFAULT FALSE
                 );
             """))
+            session.exec(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS has_used_trial BOOLEAN DEFAULT FALSE;"))
+            session.exec(text("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS is_trial BOOLEAN DEFAULT FALSE;"))
             session.commit()
         except Exception:
             pass

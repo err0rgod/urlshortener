@@ -186,7 +186,9 @@ def get_subscription_details(user: User) -> dict:
                 "effective_tier": "free",
                 "days_remaining": 0,
                 "relaxation_remaining": 0,
-                "plan_expires_at": None
+                "plan_expires_at": None,
+                "is_trial": False,
+                "has_used_trial": user.has_used_trial
             }
 
         plan_expires_at = sub.current_period_end.replace(tzinfo=None) if sub.current_period_end.tzinfo else sub.current_period_end
@@ -200,7 +202,9 @@ def get_subscription_details(user: User) -> dict:
                 "effective_tier": sub.tier,
                 "days_remaining": max(0, days_remaining),
                 "relaxation_remaining": sub.relaxation_days_remaining,
-                "plan_expires_at": plan_expires_at.isoformat()
+                "plan_expires_at": plan_expires_at.isoformat(),
+                "is_trial": sub.is_trial,
+                "has_used_trial": user.has_used_trial
             }
         else:
             delta_expiry = now - plan_expires_at
@@ -213,7 +217,9 @@ def get_subscription_details(user: User) -> dict:
                     "effective_tier": "free",
                     "days_remaining": 0,
                     "relaxation_remaining": relaxation_remaining,
-                    "plan_expires_at": plan_expires_at.isoformat()
+                    "plan_expires_at": plan_expires_at.isoformat(),
+                    "is_trial": sub.is_trial,
+                    "has_used_trial": user.has_used_trial
                 }
             else:
                 return {
@@ -221,7 +227,9 @@ def get_subscription_details(user: User) -> dict:
                     "effective_tier": "free",
                     "days_remaining": 0,
                     "relaxation_remaining": 0,
-                    "plan_expires_at": plan_expires_at.isoformat()
+                    "plan_expires_at": plan_expires_at.isoformat(),
+                    "is_trial": sub.is_trial,
+                    "has_used_trial": user.has_used_trial
                 }
 
 
@@ -253,7 +261,9 @@ async def get_me(request: Request):
                 "subscription_status": sub_details["status"],
                 "days_remaining": sub_details["days_remaining"],
                 "relaxation_remaining": sub_details["relaxation_remaining"],
-                "plan_expires_at": sub_details["plan_expires_at"]
+                "plan_expires_at": sub_details["plan_expires_at"],
+                "is_trial": sub_details.get("is_trial", False),
+                "has_used_trial": sub_details.get("has_used_trial", False)
             }
         }
     except jwt.PyJWTError:

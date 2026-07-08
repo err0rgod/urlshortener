@@ -446,6 +446,36 @@ async def create_payment_order(req_data: PaymentOrderRequest, user_id: int = Dep
         raise HTTPException(status_code=500, detail="Failed to initiate payment")
 
 
+@app.post("/api/payments/create-trial-order")
+async def create_trial_order(user_id: int = Depends(get_required_user_id)):
+    if not razorpay_client:
+        raise HTTPException(status_code=500, detail="Razorpay client not configured")
+        
+    with Session(engine) as db_session:
+        user = db_session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if user.has_used_trial:
+            raise HTTPException(status_code=400, detail="You have already used your trial option.")
+            
+    try:
+        order_data = {
+            "amount": 900, # ₹9.00
+            "currency": "INR",
+            "receipt": f"trial_{user_id}_{int(time.time())}"
+        }
+        order = razorpay_client.order.create(data=order_data)
+        return {
+            "order_id": order["id"],
+            "amount": order["amount"],
+            "currency": order["currency"],
+            "key_id": RAZORPAY_KEY_ID
+        }
+    except Exception as e:
+        logger.error(f"Error creating Razorpay trial order: {e}")
+        raise HTTPException(status_code=500, detail="Failed to initiate trial payment")
+
+
 @app.post("/api/payments/verify")
 async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(get_required_user_id)):
         
@@ -474,9 +504,13 @@ async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(
         except Exception:
             amount = 159900
             
+        is_trial_payment = (amount == 900)
         target_tier = "business" if amount == 349900 else "startup"
-        user.tier = target_tier
         
+        user.tier = target_tier
+        if is_trial_payment:
+            user.has_used_trial = True
+            
         from models import Subscription
         statement = select(Subscription).where(Subscription.user_id == user_id)
         sub = db_session.exec(statement).first()
@@ -484,26 +518,30 @@ async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(
         from datetime import datetime, UTC, timedelta
         now = datetime.now(UTC).replace(tzinfo=None)
         
+        duration_days = 14 if is_trial_payment else 30
+        
         if not sub:
             sub = Subscription(
                 user_id=user_id,
                 tier=target_tier,
                 current_period_start=now,
-                current_period_end=now + timedelta(days=30),
+                current_period_end=now + timedelta(days=duration_days),
                 relaxation_days_remaining=7,
-                status="active"
+                status="active",
+                is_trial=is_trial_payment
             )
         else:
             sub.tier = target_tier
             sub.status = "active"
+            sub.is_trial = is_trial_payment
             sub.relaxation_days_remaining = 7
             sub.dunning_warn_sent = False
             sub.dunning_expired_sent = False
             sub.dunning_ended_sent = False
-            if sub.current_period_end and sub.current_period_end > now:
-                sub.current_period_end = sub.current_period_end + timedelta(days=30)
+            if not is_trial_payment and sub.current_period_end and sub.current_period_end > now:
+                sub.current_period_end = sub.current_period_end + timedelta(days=duration_days)
             else:
-                sub.current_period_end = now + timedelta(days=30)
+                sub.current_period_end = now + timedelta(days=duration_days)
                 
         user.plan_expires_at = sub.current_period_end
         user.relaxation_days_remaining = 7
