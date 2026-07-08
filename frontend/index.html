@@ -1115,7 +1115,6 @@
         let currentUserDetails = null;
 
         function updatePricingDisplay() {
-            const isDark = document.documentElement.classList.contains('dark');
             const isIndia = currentUserDetails ? (currentUserDetails.country === 'IN') : false;
             const isTrialEligible = currentUserDetails ? (currentUserDetails.logged_in && currentUserDetails.tier === 'free' && !currentUserDetails.has_used_trial) : true;
             
@@ -1123,7 +1122,7 @@
             const startupBtn = document.getElementById('startup-btn');
             
             if (startupPriceTag && startupBtn) {
-                if (isDark && isTrialEligible) {
+                if (isTrialEligible) {
                     if (isIndia) {
                         startupPriceTag.innerHTML = `₹9<span class="text-xs text-slate-400 font-normal"> / 14-day trial</span>`;
                     } else {

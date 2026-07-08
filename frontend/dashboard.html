@@ -1086,8 +1086,7 @@
             const banner = document.getElementById('trial-alert-banner');
             if (!banner) return;
             
-            const isDark = document.documentElement.classList.contains('dark');
-            if (!user || !user.is_trial || !isDark) {
+            if (!user || !user.is_trial) {
                 banner.classList.add('hidden');
                 return;
             }
@@ -1133,8 +1132,7 @@
             if (!user) return;
             
             const isIndia = (user.country === 'IN');
-            const isDark = document.documentElement.classList.contains('dark');
-            const isTrialEligible = (user.tier === 'free' && !user.has_used_trial && isDark);
+            const isTrialEligible = (user.tier === 'free' && !user.has_used_trial);
             
             const upgradeStartupBtn = document.getElementById('upgrade-startup-btn');
             const upgradeBusinessBtn = document.getElementById('upgrade-business-btn');
