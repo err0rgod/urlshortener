@@ -240,14 +240,14 @@ async def get_me(request: Request):
     """
     token = request.cookies.get("session_token")
     if not token:
-         return {"logged_in": False}
+         return {"logged_in": False, "country": request.headers.get("CF-IPCountry", "IN")}
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         email = payload.get("email")
 
         user = get_user_by_email(email)
         if not user:
-            return {"logged_in": False}
+            return {"logged_in": False, "country": request.headers.get("CF-IPCountry", "IN")}
         
         sub_details = get_subscription_details(user)
         return {
@@ -268,4 +268,4 @@ async def get_me(request: Request):
             }
         }
     except jwt.PyJWTError:
-        return {"logged_in": False}
+        return {"logged_in": False, "country": request.headers.get("CF-IPCountry", "IN")}

@@ -609,7 +609,7 @@
                     <div>
                         <h3 class="text-base font-bold text-slate-900 mb-2">Startup Choice</h3>
                         <p class="text-[11px] text-slate-400 mb-4">For growth teams and single brands.</p>
-                        <div class="text-2xl font-extrabold text-slate-900 mb-5">$19<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <div id="startup-price-tag" class="text-2xl font-extrabold text-slate-900 mb-5">$19<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
                         <ul class="space-y-2.5 mb-6 text-left">
                             <li class="flex items-center text-[11px] text-slate-600"><span class="text-indigo-600 mr-1.5">✓</span> Unlimited redirects</li>
                             <li class="flex items-center text-[11px] text-slate-600"><span class="text-indigo-600 mr-1.5">✓</span> 1 Custom domain integration</li>
@@ -617,7 +617,7 @@
                             <li class="flex items-center text-[11px] text-slate-600"><span class="text-indigo-600 mr-1.5">✓</span> Premium redirect policies</li>
                         </ul>
                     </div>
-                    <button onclick="handleProUpgrade('startup')" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button id="startup-btn" onclick="handleProUpgrade('startup')" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         Get Started
                     </button>
                 </div>
@@ -627,7 +627,7 @@
                     <div>
                         <h3 class="text-base font-bold text-slate-900 mb-2">Business Pro</h3>
                         <p class="text-[11px] text-slate-400 mb-4">For larger setups and agencies.</p>
-                        <div class="text-2xl font-extrabold text-slate-900 mb-5">$39<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
+                        <div id="business-price-tag" class="text-2xl font-extrabold text-slate-900 mb-5">$39<span class="text-xs text-slate-400 font-normal"> /mo</span></div>
                         <ul class="space-y-2.5 mb-6 text-left">
                             <li class="flex items-center text-[11px] text-slate-600"><span class="text-indigo-600 mr-1.5">✓</span> Unlimited redirects</li>
                             <li class="flex items-center text-[11px] text-slate-600"><span class="text-indigo-600 mr-1.5">✓</span> 5 Custom domain integrations</li>
@@ -1112,12 +1112,141 @@
             }
         }
 
+        let currentUserDetails = null;
+
+        function updatePricingDisplay() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const isIndia = currentUserDetails ? (currentUserDetails.country === 'IN') : false;
+            const isTrialEligible = currentUserDetails ? (currentUserDetails.logged_in && currentUserDetails.tier === 'free' && !currentUserDetails.has_used_trial) : true;
+            
+            const startupPriceTag = document.getElementById('startup-price-tag');
+            const startupBtn = document.getElementById('startup-btn');
+            
+            if (startupPriceTag && startupBtn) {
+                if (isDark && isTrialEligible) {
+                    if (isIndia) {
+                        startupPriceTag.innerHTML = `₹9<span class="text-xs text-slate-400 font-normal"> / 14-day trial</span>`;
+                    } else {
+                        startupPriceTag.innerHTML = `$0.10<span class="text-xs text-slate-400 font-normal"> / 14-day trial</span>`;
+                    }
+                    startupBtn.textContent = "Start 14-day Trial";
+                    startupBtn.className = "block text-center w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer";
+                    startupBtn.onclick = () => handleTrialUpgrade();
+                } else {
+                    if (isIndia) {
+                        startupPriceTag.innerHTML = `₹1,599<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                    } else {
+                        startupPriceTag.innerHTML = `$19<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                    }
+                    startupBtn.textContent = "Get Started";
+                    startupBtn.className = "block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer";
+                    startupBtn.onclick = () => handleProUpgrade('startup');
+                }
+            }
+            
+            const businessPriceTag = document.getElementById('business-price-tag');
+            if (businessPriceTag) {
+                if (isIndia) {
+                    businessPriceTag.innerHTML = `₹3,499<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                } else {
+                    businessPriceTag.innerHTML = `$39<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                }
+            }
+        }
+
+        async function handleTrialUpgrade() {
+            try {
+                const response = await fetch('/auth/me');
+                if (!response.ok) {
+                    window.location.href = `/login?upgrade=1&plan=trial`;
+                    return;
+                }
+                const data = await response.json();
+                if (!data.logged_in) {
+                    window.location.href = `/login?upgrade=1&plan=trial`;
+                    return;
+                }
+                
+                if (data.user.tier === 'premium' || ['premium', 'startup', 'business'].includes(data.user.tier)) {
+                    alert("You are already a Premium user!");
+                    window.location.href = '/dashboard';
+                    return;
+                }
+                if (data.user.has_used_trial) {
+                    alert("You have already used your trial option.");
+                    window.location.href = '/dashboard';
+                    return;
+                }
+                
+                const orderResp = await fetch('/api/payments/create-trial-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!orderResp.ok) {
+                    const orderData = await orderResp.json();
+                    alert(orderData.detail || "Failed to initiate trial payment");
+                    return;
+                }
+                const orderData = await orderResp.json();
+                
+                const options = {
+                    key: orderData.key_id,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "FlexURL Trial",
+                    description: "₹9 / $0.10 for 14 days of Premium features",
+                    order_id: orderData.order_id,
+                    handler: async function (paymentResponse) {
+                        try {
+                            const verifyResponse = await fetch('/api/payments/verify', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    razorpay_order_id: paymentResponse.razorpay_order_id,
+                                    razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                                    razorpay_signature: paymentResponse.razorpay_signature
+                                })
+                            });
+                            if (!verifyResponse.ok) {
+                                const verifyData = await verifyResponse.json();
+                                alert(verifyData.detail || "Trial payment verification failed");
+                                return;
+                            }
+                            alert("Payment Successful! Trial activated.");
+                            window.location.href = '/dashboard';
+                        } catch (err) {
+                            console.error("Verification call failed:", err);
+                        }
+                    },
+                    prefill: {
+                        name: data.user.full_name,
+                        email: data.user.email
+                    },
+                    theme: {
+                        color: "#10b981"
+                    }
+                };
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } catch (err) {
+                console.error("Trial checkout initiation failed:", err);
+                alert("Failed to contact payment gateway");
+            }
+        }
+
         // Check authentication state on load
         async function checkAuthStatus() {
             try {
                 const response = await fetch('/auth/me');
                 if (response.ok) {
                     const data = await response.json();
+                    currentUserDetails = data.logged_in ? data.user : { logged_in: false, country: data.country };
+                    updatePricingDisplay();
+                    
                     if (data.logged_in) {
                         const container = document.getElementById('auth-nav-container');
                         if (container) {
@@ -1194,13 +1323,21 @@
                             }
                         }
                     }
+                } else {
+                    currentUserDetails = { logged_in: false, country: 'IN' };
+                    updatePricingDisplay();
                 }
             } catch (err) {
                 console.error("Auth check failed:", err);
+                currentUserDetails = { logged_in: false, country: 'IN' };
+                updatePricingDisplay();
             }
         }
 
+        window.addEventListener('theme-changed', updatePricingDisplay);
+
         window.addEventListener('DOMContentLoaded', () => {
+            updatePricingDisplay();
             checkAuthStatus();
             
             // Accordion toggle logic
