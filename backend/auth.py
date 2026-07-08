@@ -263,7 +263,8 @@ async def get_me(request: Request):
                 "relaxation_remaining": sub_details["relaxation_remaining"],
                 "plan_expires_at": sub_details["plan_expires_at"],
                 "is_trial": sub_details.get("is_trial", False),
-                "has_used_trial": sub_details.get("has_used_trial", False)
+                "has_used_trial": sub_details.get("has_used_trial", False),
+                "country": request.headers.get("CF-IPCountry", "IN")
             }
         }
     except jwt.PyJWTError:

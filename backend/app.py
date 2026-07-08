@@ -422,16 +422,25 @@ async def create_support_ticket(ticket: SupportTicketRequest, background_tasks: 
 
 
 @app.post("/api/payments/create-order")
-async def create_payment_order(req_data: PaymentOrderRequest, user_id: int = Depends(get_required_user_id)):
+async def create_payment_order(req_data: PaymentOrderRequest, request: Request, user_id: int = Depends(get_required_user_id)):
         
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay client not configured")
         
+    country = request.headers.get("CF-IPCountry", "IN")
+    is_india = (country == "IN")
+    
     try:
-        amount = 349900 if req_data.plan == "business" else 159900
+        if is_india:
+            amount = 349900 if req_data.plan == "business" else 159900
+            currency = "INR"
+        else:
+            amount = 3900 if req_data.plan == "business" else 1900
+            currency = "USD"
+            
         order_data = {
             "amount": amount,
-            "currency": "INR",
+            "currency": currency,
             "receipt": f"receipt_{user_id}_{int(time.time())}"
         }
         order = razorpay_client.order.create(data=order_data)
@@ -447,7 +456,7 @@ async def create_payment_order(req_data: PaymentOrderRequest, user_id: int = Dep
 
 
 @app.post("/api/payments/create-trial-order")
-async def create_trial_order(user_id: int = Depends(get_required_user_id)):
+async def create_trial_order(request: Request, user_id: int = Depends(get_required_user_id)):
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay client not configured")
         
@@ -458,10 +467,16 @@ async def create_trial_order(user_id: int = Depends(get_required_user_id)):
         if user.has_used_trial:
             raise HTTPException(status_code=400, detail="You have already used your trial option.")
             
+    country = request.headers.get("CF-IPCountry", "IN")
+    is_india = (country == "IN")
+    
     try:
+        amount = 900 if is_india else 10  # ₹9.00 or $0.10 USD
+        currency = "INR" if is_india else "USD"
+        
         order_data = {
-            "amount": 900, # ₹9.00
-            "currency": "INR",
+            "amount": amount,
+            "currency": currency,
             "receipt": f"trial_{user_id}_{int(time.time())}"
         }
         order = razorpay_client.order.create(data=order_data)
@@ -501,11 +516,17 @@ async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(
         try:
             order_info = razorpay_client.order.fetch(req_data.razorpay_order_id)
             amount = order_info.get("amount", 159900)
+            currency = order_info.get("currency", "INR")
         except Exception:
             amount = 159900
+            currency = "INR"
             
-        is_trial_payment = (amount == 900)
-        target_tier = "business" if amount == 349900 else "startup"
+        if currency == "USD":
+            is_trial_payment = (amount == 10)
+            target_tier = "business" if amount == 3900 else "startup"
+        else:
+            is_trial_payment = (amount == 900)
+            target_tier = "business" if amount == 349900 else "startup"
         
         user.tier = target_tier
         if is_trial_payment:
