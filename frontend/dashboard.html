@@ -351,9 +351,6 @@
                                 <span id="profile-expiry-value" class="text-slate-700 font-semibold">-</span>
                             </div>
                             <div id="upgrade-button-container" class="mt-4 pt-4 border-t border-slate-150 hidden space-y-2">
-                                <button id="trial-checkout-btn" onclick="startTrialCheckout()" class="w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide hidden">
-                                    Start 14-day Trial (₹9)
-                                </button>
                                 <button id="upgrade-startup-btn" onclick="startUpgrade('startup')" class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide">
                                     Startup Choice ($19)
                                 </button>
@@ -721,41 +718,40 @@
                             }
                         }
                         
-                        // Localize Pricing/Payment Button Texts based on user country
+                        // Localize Pricing/Payment Button Texts based on user country and trial eligibility
                         const isIndia = (data.user.country === 'IN');
+                        const isTrialEligible = (data.user.tier === 'free' && !data.user.has_used_trial);
                         
-                        const trialBtn = document.getElementById('trial-checkout-btn');
-                        if (trialBtn) {
-                            if (data.user.tier === 'free' && !data.user.has_used_trial) {
-                                trialBtn.classList.remove('hidden');
-                                trialBtn.textContent = isIndia ? "Start 14-day Trial (₹9)" : "Start 14-day Trial ($0.10)";
-                            } else {
-                                trialBtn.classList.add('hidden');
-                            }
-                        }
-
                         const upgradeStartupBtn = document.getElementById('upgrade-startup-btn');
                         const upgradeBusinessBtn = document.getElementById('upgrade-business-btn');
                         if (upgradeStartupBtn && upgradeBusinessBtn) {
-                            if (isIndia) {
-                                upgradeStartupBtn.textContent = "Startup Choice (₹1,599)";
-                                upgradeBusinessBtn.textContent = "Business Pro (₹3,499)";
+                            if (isTrialEligible) {
+                                upgradeStartupBtn.textContent = isIndia ? "Start 14-day Trial (₹9)" : "Start 14-day Trial ($0.10)";
+                                upgradeStartupBtn.className = "w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide";
+                                upgradeStartupBtn.onclick = () => startTrialCheckout();
                             } else {
-                                upgradeStartupBtn.textContent = "Startup Choice ($19)";
-                                upgradeBusinessBtn.textContent = "Business Pro ($39)";
+                                upgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹1,599)" : "Startup Choice ($19)";
+                                upgradeStartupBtn.className = "w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide";
+                                upgradeStartupBtn.onclick = () => startUpgrade('startup');
                             }
+                            
+                            upgradeBusinessBtn.textContent = isIndia ? "Business Pro (₹3,499)" : "Business Pro ($39)";
                         }
 
                         const domUpgradeStartupBtn = document.getElementById('domain-upgrade-startup-btn');
                         const domUpgradeBusinessBtn = document.getElementById('domain-upgrade-business-btn');
                         if (domUpgradeStartupBtn && domUpgradeBusinessBtn) {
-                            if (isIndia) {
-                                domUpgradeStartupBtn.textContent = "Startup Choice (₹1,599)";
-                                domUpgradeBusinessBtn.textContent = "Business Pro (₹3,499)";
+                            if (isTrialEligible) {
+                                domUpgradeStartupBtn.textContent = isIndia ? "Start 14-day Trial (₹9)" : "Start 14-day Trial ($0.10)";
+                                domUpgradeStartupBtn.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors";
+                                domUpgradeStartupBtn.onclick = () => startTrialCheckout();
                             } else {
-                                domUpgradeStartupBtn.textContent = "Startup Choice ($19)";
-                                domUpgradeBusinessBtn.textContent = "Business Pro ($39)";
+                                domUpgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹1,599)" : "Startup Choice ($19)";
+                                domUpgradeStartupBtn.className = "px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors";
+                                domUpgradeStartupBtn.onclick = () => startUpgrade('startup');
                             }
+                            
+                            domUpgradeBusinessBtn.textContent = isIndia ? "Business Pro (₹3,499)" : "Business Pro ($39)";
                         }
 
                         renderTrialBanner(data.user);
