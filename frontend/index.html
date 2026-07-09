@@ -1116,7 +1116,7 @@
 
         function updatePricingDisplay() {
             const isIndia = currentUserDetails ? (currentUserDetails.country === 'IN') : false;
-            const isTrialEligible = currentUserDetails ? (currentUserDetails.logged_in && currentUserDetails.tier === 'free' && !currentUserDetails.has_used_trial) : true;
+            const isTrialEligible = currentUserDetails ? (!currentUserDetails.logged_in || (currentUserDetails.tier === 'free' && !currentUserDetails.has_used_trial)) : true;
             
             const startupPriceTag = document.getElementById('startup-price-tag');
             const startupBtn = document.getElementById('startup-btn');
@@ -1133,9 +1133,9 @@
                     startupBtn.onclick = () => handleTrialUpgrade();
                 } else {
                     if (isIndia) {
-                        startupPriceTag.innerHTML = `₹1,599<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                        startupPriceTag.innerHTML = `₹1,199<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
                     } else {
-                        startupPriceTag.innerHTML = `$19<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                        startupPriceTag.innerHTML = `$11<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
                     }
                     startupBtn.textContent = "Get Started";
                     startupBtn.className = "block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer";
@@ -1146,9 +1146,9 @@
             const businessPriceTag = document.getElementById('business-price-tag');
             if (businessPriceTag) {
                 if (isIndia) {
-                    businessPriceTag.innerHTML = `₹3,499<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                    businessPriceTag.innerHTML = `₹2,499<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
                 } else {
-                    businessPriceTag.innerHTML = `$39<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
+                    businessPriceTag.innerHTML = `$29<span class="text-xs text-slate-400 font-normal"> /mo</span>`;
                 }
             }
         }

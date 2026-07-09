@@ -432,10 +432,10 @@ async def create_payment_order(req_data: PaymentOrderRequest, request: Request, 
     
     try:
         if is_india:
-            amount = 349900 if req_data.plan == "business" else 159900
+            amount = 249900 if req_data.plan == "business" else 119900
             currency = "INR"
         else:
-            amount = 3900 if req_data.plan == "business" else 1900
+            amount = 2900 if req_data.plan == "business" else 1100
             currency = "USD"
             
         order_data = {
@@ -515,18 +515,18 @@ async def verify_payment(req_data: PaymentVerifyRequest, user_id: int = Depends(
         
         try:
             order_info = razorpay_client.order.fetch(req_data.razorpay_order_id)
-            amount = order_info.get("amount", 159900)
+            amount = order_info.get("amount", 119900)
             currency = order_info.get("currency", "INR")
         except Exception:
-            amount = 159900
+            amount = 119900
             currency = "INR"
             
         if currency == "USD":
             is_trial_payment = (amount == 10)
-            target_tier = "business" if amount == 3900 else "startup"
+            target_tier = "business" if amount == 2900 else "startup"
         else:
             is_trial_payment = (amount == 900)
-            target_tier = "business" if amount == 349900 else "startup"
+            target_tier = "business" if amount == 249900 else "startup"
         
         user.tier = target_tier
         if is_trial_payment:
