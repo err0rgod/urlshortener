@@ -1243,7 +1243,7 @@
                 const response = await fetch('/auth/me');
                 if (response.ok) {
                     const data = await response.json();
-                    currentUserDetails = data.logged_in ? data.user : { logged_in: false, country: data.country };
+                    currentUserDetails = data.logged_in ? { ...data.user, logged_in: true } : { logged_in: false, country: data.country };
                     updatePricingDisplay();
                     
                     if (data.logged_in) {
