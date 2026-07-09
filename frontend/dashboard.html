@@ -1151,15 +1151,9 @@
             const domUpgradeStartupBtn = document.getElementById('domain-upgrade-startup-btn');
             const domUpgradeBusinessBtn = document.getElementById('domain-upgrade-business-btn');
             if (domUpgradeStartupBtn && domUpgradeBusinessBtn) {
-                if (isTrialEligible) {
-                    domUpgradeStartupBtn.textContent = isIndia ? "Start 14-day Trial (₹9)" : "Start 14-day Trial ($0.10)";
-                    domUpgradeStartupBtn.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors";
-                    domUpgradeStartupBtn.onclick = () => startTrialCheckout();
-                } else {
-                    domUpgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹799)" : "Startup Choice ($11)";
-                    domUpgradeStartupBtn.className = "px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors";
-                    domUpgradeStartupBtn.onclick = () => startUpgrade('startup');
-                }
+                domUpgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹799)" : "Startup Choice ($11)";
+                domUpgradeStartupBtn.className = "px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors";
+                domUpgradeStartupBtn.onclick = () => startUpgrade('startup');
                 
                 domUpgradeBusinessBtn.textContent = isIndia ? "Business Pro (₹2,499)" : "Business Pro ($29)";
             }
