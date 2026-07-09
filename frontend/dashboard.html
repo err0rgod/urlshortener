@@ -1141,7 +1141,7 @@
             const upgradeStartupBtn = document.getElementById('upgrade-startup-btn');
             const upgradeBusinessBtn = document.getElementById('upgrade-business-btn');
             if (upgradeStartupBtn && upgradeBusinessBtn) {
-                upgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹1,199)" : "Startup Choice ($11)";
+                upgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹799)" : "Startup Choice ($11)";
                 upgradeStartupBtn.className = "w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm uppercase tracking-wide";
                 upgradeStartupBtn.onclick = () => startUpgrade('startup');
                 
@@ -1156,7 +1156,7 @@
                     domUpgradeStartupBtn.className = "px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors";
                     domUpgradeStartupBtn.onclick = () => startTrialCheckout();
                 } else {
-                    domUpgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹1,199)" : "Startup Choice ($11)";
+                    domUpgradeStartupBtn.textContent = isIndia ? "Startup Choice (₹799)" : "Startup Choice ($11)";
                     domUpgradeStartupBtn.className = "px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors";
                     domUpgradeStartupBtn.onclick = () => startUpgrade('startup');
                 }
