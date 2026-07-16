@@ -40,14 +40,24 @@ def add_url(
     custom_countdown_url: Optional[str] = None,
     domain: Optional[str] = None
 ):
-    exists = is_long_url_exists(long_url, user_id=user_id, domain=domain)
-    if exists:
-        return exists
     db_exp_time = None
     if isinstance(exp_time, datetime):
         db_exp_time = exp_time.astimezone(UTC).replace(tzinfo=None) if exp_time.tzinfo else exp_time
     elif isinstance(exp_time, int):
         db_exp_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
+    exists = is_long_url_exists(
+        long_url,
+        user_id=user_id,
+        domain=domain,
+        adopted_exp_time=db_exp_time,
+    )
+    if exists:
+        if user_id:
+            try:
+                redis_client.delete(exists)
+            except Exception as re:
+                logger.warning(f"Redis is Offline falling back to Database: {re}")
+        return exists
     short_url = get_short_url()
     url = urldata(
         short_url=short_url,

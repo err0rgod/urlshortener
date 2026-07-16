@@ -321,6 +321,198 @@ class TestRedirects(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("premium-only feature", response.json()["detail"])
 
+    @patch("app.background_safe_browsing_check")
+    @patch("app.add_url")
+    @patch("app.is_valid_url")
+    def test_anonymous_link_defaults_to_fifteen_days(self, mock_is_valid, mock_add_url, _mock_safety_check):
+        mock_is_valid.return_value = True
+        mock_add_url.return_value = "testanondefault"
+
+        with patch("short_url_gen.redis_client") as mock_redis:
+            mock_redis.incr.return_value = 1
+            before = datetime.now(UTC).replace(tzinfo=None)
+            response = self.client.post("/shorten", json={
+                "long_url": "https://example.com/anonymous-default-expiry"
+            })
+
+        self.assertEqual(response.status_code, 200)
+        expiration = mock_add_url.call_args.kwargs["exp_time"]
+        self.assertAlmostEqual(
+            (expiration - before).total_seconds(),
+            timedelta(days=15).total_seconds(),
+            delta=2
+        )
+
+    @patch("app.background_safe_browsing_check")
+    @patch("app.add_url")
+    @patch("app.is_valid_url")
+    def test_anonymous_link_expiration_is_capped_at_fifteen_days(self, mock_is_valid, mock_add_url, _mock_safety_check):
+        mock_is_valid.return_value = True
+        mock_add_url.return_value = "testanoncap"
+
+        with patch("short_url_gen.redis_client") as mock_redis:
+            mock_redis.incr.return_value = 1
+            before = datetime.now(UTC).replace(tzinfo=None)
+            response = self.client.post("/shorten?exp_time=720", json={
+                "long_url": "https://example.com/anonymous-capped-expiry"
+            })
+
+        self.assertEqual(response.status_code, 200)
+        expiration = mock_add_url.call_args.kwargs["exp_time"]
+        self.assertAlmostEqual(
+            (expiration - before).total_seconds(),
+            timedelta(days=15).total_seconds(),
+            delta=2
+        )
+
+    @patch("app.background_safe_browsing_check")
+    @patch("app.add_url")
+    @patch("app.is_valid_url")
+    def test_free_link_is_permanent_by_default_and_can_expire_early(self, mock_is_valid, mock_add_url, _mock_safety_check):
+        mock_is_valid.return_value = True
+        mock_add_url.return_value = "testfreeexpiry"
+        import jwt
+        from app import JWT_SECRET_KEY
+
+        token = jwt.encode(
+            {"user_id": self.free_user.id, "email": self.free_user.email},
+            JWT_SECRET_KEY,
+            algorithm="HS256"
+        )
+        self.client.cookies.set("session_token", token)
+
+        response = self.client.post("/shorten", json={
+            "long_url": "https://example.com/free-permanent-default"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(mock_add_url.call_args.kwargs["exp_time"])
+
+        before = datetime.now(UTC).replace(tzinfo=None)
+        response = self.client.post("/shorten?exp_time=24", json={
+            "long_url": "https://example.com/free-selected-expiry"
+        })
+        self.assertEqual(response.status_code, 200)
+        expiration = mock_add_url.call_args.kwargs["exp_time"]
+        self.assertAlmostEqual(
+            (expiration - before).total_seconds(),
+            timedelta(days=1).total_seconds(),
+            delta=2
+        )
+
+        before = datetime.now(UTC).replace(tzinfo=None)
+        response = self.client.post("/shorten?exp_time=720", json={
+            "long_url": "https://example.com/free-capped-expiry"
+        })
+        self.assertEqual(response.status_code, 200)
+        expiration = mock_add_url.call_args.kwargs["exp_time"]
+        self.assertAlmostEqual(
+            (expiration - before).total_seconds(),
+            timedelta(days=15).total_seconds(),
+            delta=2
+        )
+
+    @patch("app.background_safe_browsing_check")
+    @patch("app.add_url")
+    @patch("app.is_valid_url")
+    def test_premium_expiration_behavior_is_unchanged(self, mock_is_valid, mock_add_url, _mock_safety_check):
+        mock_is_valid.return_value = True
+        mock_add_url.return_value = "testpremiumexpiry"
+        import jwt
+        from app import JWT_SECRET_KEY
+
+        token = jwt.encode(
+            {"user_id": self.premium_user.id, "email": self.premium_user.email},
+            JWT_SECRET_KEY,
+            algorithm="HS256"
+        )
+        self.client.cookies.set("session_token", token)
+
+        response = self.client.post("/shorten", json={
+            "long_url": "https://example.com/premium-permanent-default"
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(mock_add_url.call_args.kwargs["exp_time"])
+
+        before = datetime.now(UTC).replace(tzinfo=None)
+        response = self.client.post("/shorten?exp_time=720", json={
+            "long_url": "https://example.com/premium-custom-expiry"
+        })
+        self.assertEqual(response.status_code, 200)
+        expiration = mock_add_url.call_args.kwargs["exp_time"]
+        self.assertAlmostEqual(
+            (expiration - before).total_seconds(),
+            timedelta(days=30).total_seconds(),
+            delta=2
+        )
+
+    def test_user_links_does_not_invent_expiration_for_permanent_free_link(self):
+        import jwt
+        from app import JWT_SECRET_KEY
+        from models import User
+        from short_url_gen import add_custom_url
+
+        add_custom_url(
+            long_url="https://example.com/free-permanent-listing",
+            custom_alias="testpermanent",
+            user_id=self.free_user.id,
+            exp_time=None
+        )
+
+        with Session(engine) as session:
+            user = session.get(User, self.free_user.id)
+            original_plan_expiry = user.plan_expires_at
+            user.plan_expires_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=30)
+            session.add(user)
+            session.commit()
+
+        try:
+            token = jwt.encode(
+                {"user_id": self.free_user.id, "email": self.free_user.email},
+                JWT_SECRET_KEY,
+                algorithm="HS256"
+            )
+            self.client.cookies.set("session_token", token)
+            response = self.client.get("/api/user/links")
+
+            self.assertEqual(response.status_code, 200)
+            link = next(item for item in response.json() if item["short_url"] == "testpermanent")
+            self.assertIsNone(link["exp_time"])
+        finally:
+            with Session(engine) as session:
+                user = session.get(User, self.free_user.id)
+                user.plan_expires_at = original_plan_expiry
+                session.add(user)
+                session.commit()
+
+    @patch("app.is_valid_url")
+    def test_free_user_adopting_anonymous_link_removes_automatic_expiration(self, mock_is_valid):
+        mock_is_valid.return_value = True
+        import jwt
+        from app import JWT_SECRET_KEY
+        from short_url_gen import add_custom_url
+
+        destination = "https://example.com/adopt-anonymous-as-permanent"
+        add_custom_url(
+            long_url=destination,
+            custom_alias="testadopt",
+            user_id=None,
+            exp_time=datetime.now(UTC).replace(tzinfo=None) + timedelta(days=15)
+        )
+
+        token = jwt.encode(
+            {"user_id": self.free_user.id, "email": self.free_user.email},
+            JWT_SECRET_KEY,
+            algorithm="HS256"
+        )
+        self.client.cookies.set("session_token", token)
+        response = self.client.post("/shorten", json={"long_url": destination})
+
+        self.assertEqual(response.status_code, 200)
+        with Session(engine) as session:
+            adopted_link = session.get(urldata, "testadopt")
+            self.assertEqual(adopted_link.user_id, self.free_user.id)
+            self.assertIsNone(adopted_link.exp_time)
+
     @patch("app.is_valid_url")
     def test_premium_user_can_edit_link(self, mock_is_valid):
         mock_is_valid.return_value = True

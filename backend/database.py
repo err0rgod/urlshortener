@@ -131,7 +131,12 @@ def mark_url_banned(short_url: str):
             session.commit()
     
 
-def is_long_url_exists(long_url: str, user_id: Optional[int] = None, domain: Optional[str] = None) -> Optional[str]:
+def is_long_url_exists(
+    long_url: str,
+    user_id: Optional[int] = None,
+    domain: Optional[str] = None,
+    adopted_exp_time: Optional[datetime] = None,
+) -> Optional[str]:
     """
     Checks if a long destination URL has already been shortened.
     If the link exists and is anonymous, optionally associates it with the authenticated user.
@@ -140,6 +145,7 @@ def is_long_url_exists(long_url: str, user_id: Optional[int] = None, domain: Opt
         long_url (str): The destination URL.
         user_id (Optional[int]): The ID of the authenticated user to associate.
         domain (Optional[str]): The custom domain chosen.
+        adopted_exp_time (Optional[datetime]): Expiration to apply when an anonymous link is adopted.
         
     Returns:
         Optional[str]: The short URL code if exists, None otherwise.
@@ -157,6 +163,7 @@ def is_long_url_exists(long_url: str, user_id: Optional[int] = None, domain: Opt
             results = session.exec(statement).first()
             if results is not None:
                 results.user_id = user_id
+                results.exp_time = adopted_exp_time
                 session.add(results)
                 session.commit()
                 return results.short_url

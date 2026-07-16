@@ -18,6 +18,7 @@ from ratelimit import RateLimiterStore
 from auth import router as auth_router
 from quotation import process_quotation
 from cloudflare_saas import CloudflareSaaSManager
+from expiration_policy import calculate_link_expiration
 from models import (
     clicklog, urldata, User, CustomDomain, URLRequest, URLEditRequest,
     QuoteRequest, SupportTicketRequest, PaymentOrderRequest, PaymentVerifyRequest,
@@ -956,26 +957,11 @@ async def delete_user_domain(domain_id: int, user_id: int = Depends(get_required
 async def get_user_links(user_id: int = Depends(get_required_user_id)):
 
     with Session(engine) as db_session:
-        user = db_session.get(User, user_id)
-        tier = get_user_tier(user_id, db_session)
-        
         statement = select(urldata).where(urldata.user_id == user_id).order_by(urldata.created_at.desc())
         links = db_session.exec(statement).all()
-        
-        from datetime import timedelta
-        
+
         result = []
         for link in links:
-            exp_time_str = None
-            if link.exp_time:
-                exp_time_str = link.exp_time.isoformat()
-            elif tier == "free" and user and user.plan_expires_at:
-                plan_expires = user.plan_expires_at.replace(tzinfo=None) if user.plan_expires_at.tzinfo else user.plan_expires_at
-                link_created = link.created_at.replace(tzinfo=None) if link.created_at.tzinfo else link.created_at
-                if link_created < plan_expires:
-                    virtual_exp = link_created + timedelta(days=730)
-                    exp_time_str = virtual_exp.isoformat()
-                    
             result.append({
                 "short_url": link.short_url,
                 "long_url": link.long_url,
@@ -983,7 +969,7 @@ async def get_user_links(user_id: int = Depends(get_required_user_id)):
                 "created_at": link.created_at.isoformat() if link.created_at else None,
                 "click_count": link.click_count,
                 "is_banned": link.is_banned,
-                "exp_time": exp_time_str,
+                "exp_time": link.exp_time.isoformat() if link.exp_time else None,
                 "webhook_url": link.webhook_url,
                 "ios_url": link.ios_url,
                 "android_url": link.android_url,
@@ -1714,21 +1700,14 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
             detail="Scheduled URL activation is a premium-only feature."
         )
 
-    # Enforce limits for free/anonymous tier
+    computed_exp_time = calculate_link_expiration(
+        user_tier=user_tier,
+        is_authenticated=bool(user_id),
+        requested_hours=exp_time,
+    )
+
+    # Enforce creation quotas for free/anonymous users.
     if user_tier == "free":
-        if not user_id:
-            # Anonymous creation: max expiration is 1 day (24 hours)
-            max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=1)
-        else:
-            # Registered free accounts: max expiration is 15 days
-            max_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=15)
-
-        if exp_time:
-            requested_exp = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
-            computed_exp_time = min(requested_exp, max_exp)
-        else:
-            computed_exp_time = max_exp
-
         # Limit checks for registered users
         if user_id:
             with Session(engine) as db_session:
@@ -1782,13 +1761,6 @@ async def add_long_give_short(request: URLRequest, req: Request, background_task
                     raise e
                 # Fallback gracefully if Redis fails
                 pass
-    else:
-        # Premium tier
-        if exp_time:
-            computed_exp_time = datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=exp_time)
-        else:
-            computed_exp_time = None
-
     try:
         # Extract premium parameters if the user is premium
         is_premium_user = user_tier in ("premium", "startup", "business")
@@ -2145,7 +2117,5 @@ async def developer_batch_shorten(
             results.append({"status": "error", "long_url": link_req.long_url, "error": str(err)})
             
     return {"results": results}
-
-
 
 
