@@ -292,11 +292,14 @@ BADGE_COUNTER_ALIASES = {
     "links_created": "links_created",
     "visits": "visitors",
     "visitors": "visitors",
+    "redirect": "redirects",
+    "redirects": "redirects",
 }
 
 BADGE_DEFAULT_LABELS = {
     "links_created": "links created",
     "visitors": "visitors",
+    "redirects": "redirects",
 }
 
 

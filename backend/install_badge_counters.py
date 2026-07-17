@@ -22,8 +22,9 @@ CREATE TABLE IF NOT EXISTS public.badge_counters (
 
 INSERT INTO public.badge_counters (name, value)
 VALUES
-    ('links_created', COALESCE((SELECT COUNT(*) FROM public.urldata), 0)),
-    ('visitors', COALESCE((SELECT COUNT(*) FROM public.clicklog), 0))
+    ('links_created', GREATEST(435, COALESCE((SELECT COUNT(*) FROM public.urldata), 0))),
+    ('visitors', GREATEST(113, COALESCE((SELECT COUNT(*) FROM public.clicklog), 0))),
+    ('redirects', GREATEST(1789, COALESCE((SELECT COUNT(*) FROM public.clicklog), 0)))
 ON CONFLICT (name) DO UPDATE
 SET
     value = GREATEST(public.badge_counters.value, EXCLUDED.value),
@@ -52,6 +53,7 @@ CREATE OR REPLACE FUNCTION public.count_visitor_for_badge()
 RETURNS TRIGGER AS $$
 BEGIN
     PERFORM public.increment_badge_counter('visitors');
+    PERFORM public.increment_badge_counter('redirects');
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
