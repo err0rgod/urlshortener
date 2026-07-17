@@ -3,6 +3,7 @@ import os
 import json
 import asyncio
 import hashlib
+from html import escape
 
 # Ensure the backend directory is in python path for local imports
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +32,7 @@ from datetime import datetime, UTC
 import time
 import jwt
 from sqlmodel import Session, select
-from sqlalchemy import func
+from sqlalchemy import func, text
 from contextlib import asynccontextmanager
 from logger import logger
 from report_scheduler import daily_report_scheduler_loop
@@ -285,6 +286,80 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "127.0.0.1"
 
 
+BADGE_COUNTER_ALIASES = {
+    "links": "links_created",
+    "links-created": "links_created",
+    "links_created": "links_created",
+    "visits": "visitors",
+    "visitors": "visitors",
+}
+
+BADGE_DEFAULT_LABELS = {
+    "links_created": "links created",
+    "visitors": "visitors",
+}
+
+
+def compact_badge_number(value: int) -> str:
+    for suffix, divisor in (("B", 1_000_000_000), ("M", 1_000_000), ("K", 1_000)):
+        if value >= divisor:
+            compact = value / divisor
+            return f"{compact:.1f}{suffix}" if compact < 10 else f"{compact:.0f}{suffix}"
+    return str(value)
+
+
+def normalize_badge_color(value: str, fallback: str) -> str:
+    color = value.strip().lstrip("#")
+    if len(color) in (3, 6) and all(char in "0123456789abcdefABCDEF" for char in color):
+        return f"#{color}"
+    named_colors = {
+        "black": "#111827",
+        "green": "#16a34a",
+        "blue": "#2563eb",
+        "red": "#dc2626",
+        "gray": "#64748b",
+        "slate": "#334155",
+        "orange": "#ea580c",
+        "purple": "#7c3aed",
+    }
+    return named_colors.get(value.strip().lower(), fallback)
+
+
+def badge_text_width(value: str) -> int:
+    return max(36, len(value) * 7 + 18)
+
+
+def render_counter_badge(label: str, value: str, left_color: str, right_color: str) -> str:
+    label_width = badge_text_width(label)
+    value_width = badge_text_width(value)
+    total_width = label_width + value_width
+    safe_label = escape(label)
+    safe_value = escape(value)
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="{safe_label}: {safe_value}">
+  <title>{safe_label}: {safe_value}</title>
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r">
+    <rect width="{total_width}" height="20" rx="3" fill="#fff"/>
+  </clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{label_width}" height="20" fill="{left_color}"/>
+    <rect x="{label_width}" width="{value_width}" height="20" fill="{right_color}"/>
+    <rect width="{total_width}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+    <text aria-hidden="true" x="{label_width * 5}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{(label_width - 10) * 10}">{safe_label}</text>
+    <text x="{label_width * 5}" y="140" transform="scale(.1)" fill="#fff" textLength="{(label_width - 10) * 10}">{safe_label}</text>
+    <text aria-hidden="true" x="{(label_width + value_width / 2) * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{(value_width - 10) * 10}">{safe_value}</text>
+    <text x="{(label_width + value_width / 2) * 10}" y="140" transform="scale(.1)" fill="#fff" textLength="{(value_width - 10) * 10}">{safe_value}</text>
+  </g>
+</svg>
+"""
+
+
 limiter = RateLimiterStore(max_tokens=60, refill_rate=60, interval=60)
 
 
@@ -342,6 +417,45 @@ async def sitemap():
 async def security():
     with open(os.path.join(FRONTEND_DIR, "security.txt"), encoding="utf-8") as f:
         return Response(content=f.read(), media_type="text/plain")
+
+
+@app.get("/badge/{counter}.svg")
+async def counter_badge(
+    counter: str,
+    left_text: Optional[str] = None,
+    left_color: str = "black",
+    right_color: str = "green",
+    units: str = "compact",
+):
+    counter_name = BADGE_COUNTER_ALIASES.get(counter.strip().lower())
+    if not counter_name:
+        raise HTTPException(status_code=404, detail="Unknown badge counter")
+    if units not in ("compact", "raw"):
+        raise HTTPException(status_code=400, detail="units must be compact or raw")
+
+    with Session(engine) as db_session:
+        value = db_session.execute(
+            text("SELECT value FROM public.badge_counters WHERE name = :name"),
+            {"name": counter_name},
+        ).scalar_one_or_none()
+
+    count = int(value or 0)
+    label = (left_text or BADGE_DEFAULT_LABELS[counter_name])[:40]
+    badge_value = compact_badge_number(count) if units == "compact" else str(count)
+    svg = render_counter_badge(
+        label=label,
+        value=badge_value,
+        left_color=normalize_badge_color(left_color, "#111827"),
+        right_color=normalize_badge_color(right_color, "#16a34a"),
+    )
+    return Response(
+        content=svg,
+        media_type="image/svg+xml",
+        headers={
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @app.get("/sad_meme.mp4")
@@ -2117,5 +2231,3 @@ async def developer_batch_shorten(
             results.append({"status": "error", "long_url": link_req.long_url, "error": str(err)})
             
     return {"results": results}
-
-

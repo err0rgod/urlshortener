@@ -19,22 +19,23 @@ python backend/install_badge_counters.py
 
 The installer backfills from the existing `urldata` and `clicklog` row counts, then adds PostgreSQL insert triggers for future increments.
 
-## Run The Badge Service
+## Badge Endpoint
 
-Run this as a separate service:
+The existing FastAPI application serves SVG badges directly:
 
-```powershell
-uvicorn backend.badge_counter_app:app --host 0.0.0.0 --port 8010
+```text
+/badge/visitors.svg
+/badge/links-created.svg
 ```
 
 ## Markdown
 
-Replace `https://badges.flexurl.app` with the public URL where the badge service is hosted.
+Use your existing public domain:
 
 ```markdown
-[![FlexURL Visitors](https://badges.flexurl.app/badge/visitors.svg?left_text=visitors&left_color=BLACK&right_color=GREEN)](https://flexurl.app)
+[![FlexURL Visitors](https://flexurl.app/badge/visitors.svg?left_text=visitors&left_color=BLACK&right_color=GREEN)](https://flexurl.app)
 
-[![FlexURL Links Created](https://badges.flexurl.app/badge/links-created.svg?left_text=links%20created&left_color=BLACK&right_color=GREEN)](https://flexurl.app)
+[![FlexURL Links Created](https://flexurl.app/badge/links-created.svg?left_text=links%20created&left_color=BLACK&right_color=GREEN)](https://flexurl.app)
 ```
 
 Use `units=raw` if you do not want compact values like `1.2K`.
